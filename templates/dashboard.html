@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spike Watch — Fraud Detection Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0E1420;
+    --panel: #161F30;
+    --panel-raised: #1C2740;
+    --hairline: #2A3650;
+    --text: #E6EAF2;
+    --text-dim: #8996AE;
+    --safe: #3FBF95;
+    --caution: #E0A72E;
+    --alert: #E5544B;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+  }
+  a { color: inherit; }
+
+  .shell {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 40px 28px 80px;
+  }
+
+  header.masthead {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--hairline);
+    padding-bottom: 24px;
+    margin-bottom: 36px;
+  }
+  header.masthead h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  header.masthead p {
+    margin: 0;
+    color: var(--text-dim);
+    font-size: 14px;
+  }
+  .pulse {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--safe);
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--safe);
+    box-shadow: 0 0 0 4px rgba(63,191,149,0.15);
+  }
+
+  /* Hero: the recall/precision numbers ARE the pitch, so they lead */
+  .hero {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--hairline);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 40px;
+  }
+  .hero .stat {
+    background: var(--panel);
+    padding: 22px 20px;
+  }
+  .hero .stat .value {
+    font-family: var(--mono);
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1;
+  }
+  .hero .stat .label {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-top: 8px;
+  }
+  .hero .stat.recall .value { color: var(--safe); }
+  .hero .stat.fp .value { color: var(--caution); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 860px) {
+    .grid { grid-template-columns: 1fr; }
+    .hero { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    padding: 22px;
+  }
+  .panel h2 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+  .panel .sub {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin: 0 0 18px;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left;
+    color: var(--text-dim);
+    font-weight: 500;
+    font-size: 12px;
+    padding: 0 10px 10px;
+    border-bottom: 1px solid var(--hairline);
+  }
+  tbody td {
+    padding: 10px;
+    border-bottom: 1px solid rgba(42,54,80,0.5);
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  .amt { text-align: right; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-family: var(--sans);
+    font-weight: 600;
+  }
+  .badge.flagged { background: rgba(229,84,75,0.15); color: var(--alert); }
+  .badge.clear { background: rgba(63,191,149,0.12); color: var(--safe); }
+
+  /* Score-a-transaction form */
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .field input, .field select {
+    width: 100%;
+    background: var(--panel-raised);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 9px 11px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-color: var(--safe);
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .checkline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+  .checkline input { width: auto; }
+
+  button.score-btn {
+    width: 100%;
+    background: var(--safe);
+    color: #06140F;
+    border: none;
+    border-radius: 6px;
+    padding: 11px;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 6px;
+  }
+  button.score-btn:hover { filter: brightness(1.08); }
+
+  .result {
+    margin-top: 18px;
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--hairline);
+    display: none;
+  }
+  .result.show { display: block; }
+  .result .prob {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 500;
+  }
+  .result .verdict { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+  .toolbar { display: flex; gap: 8px; margin-bottom: 16px; }
+  .toolbar button {
+    background: var(--panel-raised);
+    border: 1px solid var(--hairline);
+    color: var(--text-dim);
+    font-family: var(--sans);
+    font-size: 12.5px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .toolbar button.active {
+    color: var(--text);
+    border-color: var(--safe);
+  }
+
+  .note {
+    margin-top: 32px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--hairline);
+    padding-top: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="masthead">
+    <div>
+      <h1>Spike Watch</h1>
+      <p>Fraud-spike detection for merchant transaction streams</p>
+    </div>
+    <div class="pulse"><span class="dot"></span>model loaded</div>
+  </header>
+
+  <div class="hero" id="heroStats"></div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Transaction feed</h2>
+      <p class="sub">Held-out test-set transactions, scored by the trained model</p>
+      <div class="toolbar">
+        <button id="btnAll" class="active">All</button>
+        <button id="btnFlagged">Flagged only</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Merchant</th><th class="amt">Amount</th>
+            <th>Velocity</th><th>Time</th><th>Verdict</th>
+          </tr>
+        </thead>
+        <tbody id="txnBody"></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Score a transaction</h2>
+      <p class="sub">Send a transaction through the live model</p>
+      <div class="field">
+        <label>Amount</label>
+        <input type="number" id="fAmount" value="4200" step="0.01">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Merchant ID</label>
+          <input type="number" id="fMerchant" value="3" min="0" max="11">
+        </div>
+        <div class="field">
+          <label>Device ID</label>
+          <input type="number" id="fDevice" value="9001">
+        </div>
+      </div>
+      <label class="checkline">
+        <input type="checkbox" id="fKnown" checked> Known device
+      </label>
+      <label class="checkline">
+        <input type="checkbox" id="fIpMatch" checked> IP country matches billing
+      </label>
+      <button class="score-btn" onclick="scoreTransaction()">Run detection</button>
+      <div class="result" id="scoreResult">
+        <div class="prob" id="probValue">—</div>
+        <div class="verdict" id="verdictText"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note" id="footNote"></div>
+</div>
+
+<script>
+let currentFilter = 'all';
+
+async function loadMetrics() {
+  const res = await fetch('/api/metrics');
+  const m = await res.json();
+  document.getElementById('heroStats').innerHTML = `
+    <div class="stat recall">
+      <div class="value">${(m.recall*100).toFixed(1)}%</div>
+      <div class="label">Recall on held-out fraud</div>
+    </div>
+    <div class="stat">
+      <div class="value">${(m.precision*100).toFixed(1)}%</div>
+      <div class="label">Precision</div>
+    </div>
+    <div class="stat fp">
+      <div class="value">${m.confusion_matrix.fp}</div>
+      <div class="label">False positives / ${m.test_set_size} txns</div>
+    </div>
+    <div class="stat">
+      <div class="value">$${m.estimated_fraud_value_caught_usd.toLocaleString()}</div>
+      <div class="label">Fraud value caught in test set</div>
+    </div>
+  `;
+  document.getElementById('footNote').textContent =
+    `Model: ${m.model} · threshold ${m.threshold} · ${m.test_set_fraud_count} fraud transactions in a ${m.test_set_size}-transaction held-out test set. FP cost assumed at $${m.false_positive_cost_assumption_usd}/transaction (support + friction).`;
+}
+
+async function loadTransactions() {
+  const flagged = currentFilter === 'flagged' ? 'true' : 'false';
+  const res = await fetch(`/api/transactions?limit=150&flagged=${flagged}`);
+  const rows = await res.json();
+  const body = document.getElementById('txnBody');
+  body.innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.transaction_id}</td>
+      <td>M${r.merchant_id}</td>
+      <td class="amt">$${r.amount.toFixed(2)}</td>
+      <td>${r.merchant_velocity_10min}/10m</td>
+      <td>${r.timestamp.slice(5,16).replace('T',' ')}</td>
+      <td>${r.flagged ? '<span class="badge flagged">Flagged</span>' : '<span class="badge clear">Clear</span>'}</td>
+    </tr>
+  `).join('');
+}
+
+document.getElementById('btnAll').onclick = () => {
+  currentFilter = 'all';
+  document.getElementById('btnAll').classList.add('active');
+  document.getElementById('btnFlagged').classList.remove('active');
+  loadTransactions();
+};
+document.getElementById('btnFlagged').onclick = () => {
+  currentFilter = 'flagged';
+  document.getElementById('btnFlagged').classList.add('active');
+  document.getElementById('btnAll').classList.remove('active');
+  loadTransactions();
+};
+
+async function scoreTransaction() {
+  const payload = {
+    amount: parseFloat(document.getElementById('fAmount').value),
+    merchant_id: parseInt(document.getElementById('fMerchant').value),
+    device_id: parseInt(document.getElementById('fDevice').value),
+    device_is_known: document.getElementById('fKnown').checked,
+    ip_country_match: document.getElementById('fIpMatch').checked,
+  };
+  const res = await fetch('/api/score', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  const resultEl = document.getElementById('scoreResult');
+  resultEl.classList.add('show');
+  if (data.error) {
+    document.getElementById('probValue').textContent = 'Error';
+    document.getElementById('verdictText').textContent = data.error;
+    return;
+  }
+  document.getElementById('probValue').textContent = (data.fraud_probability*100).toFixed(1) + '%';
+  document.getElementById('probValue').style.color = data.flagged ? 'var(--alert)' : 'var(--safe)';
+  document.getElementById('verdictText').textContent = data.flagged
+    ? `Flagged — above threshold (${(data.threshold_used*100).toFixed(1)}%)`
+    : `Clear — below threshold (${(data.threshold_used*100).toFixed(1)}%)`;
+}
+
+loadMetrics();
+loadTransactions();
+</script>
+</body>
+</html>
