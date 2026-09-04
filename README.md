@@ -89,6 +89,13 @@ off-hours timing (4%) are secondary signals.
    their job on an edge case, not a bug to silently fix by hand-tuning
    this one row.
 
+4. **Numpy boolean serialization error in Flask JSON response.** When building
+   the threshold evaluation endpoint (`/api/threshold_eval`), the comparison
+   `(t == threshold)` produced a `numpy.bool_` instance. In Python 3.14, standard
+   Flask `jsonify()` failed with `TypeError: Object of type bool is not JSON serializable`.
+   Diagnosed via log tracebacks and resolved by explicitly wrapping with
+   `bool(abs(t - threshold) < 1e-4)`.
+
 ## Run it
 
 ```bash
