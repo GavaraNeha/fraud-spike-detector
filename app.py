@@ -9,19 +9,21 @@ Endpoints:
 """
 
 import json
+import os
 import sys
 import joblib
 import pandas as pd
 from flask import Flask, jsonify, render_template, request
 
-sys.path.insert(0, "/home/claude/fraud-spike-detector/model")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(BASE_DIR, "model"))
 from features import engineer_features
 
 app = Flask(__name__)
 
-MODEL_PATH = "/home/claude/fraud-spike-detector/model/model.pkl"
-METRICS_PATH = "/home/claude/fraud-spike-detector/model/metrics.json"
-DATA_PATH = "/home/claude/fraud-spike-detector/data/transactions.csv"
+MODEL_PATH = os.path.join(BASE_DIR, "model", "model.pkl")
+METRICS_PATH = os.path.join(BASE_DIR, "model", "metrics.json")
+DATA_PATH = os.path.join(BASE_DIR, "data", "transactions.csv")
 
 bundle = joblib.load(MODEL_PATH)
 model = bundle["model"]

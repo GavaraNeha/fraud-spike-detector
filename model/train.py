@@ -15,6 +15,7 @@ Design choices (documented for the submission write-up):
     the model memorize specific transactions instead of the pattern).
 """
 
+import os
 import sys
 import json
 import numpy as np
@@ -27,12 +28,13 @@ from sklearn.metrics import (
 )
 import joblib
 
-sys.path.insert(0, "/home/claude/fraud-spike-detector/model")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(BASE_DIR, "model"))
 from features import engineer_features
 
-DATA_PATH = "/home/claude/fraud-spike-detector/data/transactions.csv"
-MODEL_PATH = "/home/claude/fraud-spike-detector/model/model.pkl"
-METRICS_PATH = "/home/claude/fraud-spike-detector/model/metrics.json"
+DATA_PATH = os.path.join(BASE_DIR, "data", "transactions.csv")
+MODEL_PATH = os.path.join(BASE_DIR, "model", "model.pkl")
+METRICS_PATH = os.path.join(BASE_DIR, "model", "metrics.json")
 
 # Business assumption used for false-positive cost framing (documented,
 # not hidden): a legit transaction incorrectly held costs ~$4 in support/

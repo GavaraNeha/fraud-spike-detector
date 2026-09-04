@@ -121,9 +121,12 @@ def build_dataset():
     return df
 
 
+import os
+
 if __name__ == "__main__":
     df = build_dataset()
-    out_path = "/home/claude/fraud-spike-detector/data/transactions.csv"
+    out_dir = os.path.dirname(os.path.abspath(__file__))
+    out_path = os.path.join(out_dir, "transactions.csv")
     df.to_csv(out_path, index=False)
     print(f"Wrote {len(df)} transactions ({df['label'].sum()} fraud, "
           f"{len(df) - df['label'].sum()} normal) to {out_path}")
