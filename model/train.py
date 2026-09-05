@@ -1,18 +1,15 @@
 """
-Trains the fraud-spike detector and reports honest, held-out metrics.
+Trains the fraud-spike detector using a 60% Train / 20% Validation / 20% Final Test
+chronological split and reports honest, untouched final test metrics.
 
-Design choices (documented for the submission write-up):
-  - Gradient boosting (not an LLM) for the actual scoring call. This is a
-    latency-sensitive, high-volume, compliance-adjacent decision — a
-    tabular model gives sub-millisecond scoring, deterministic behavior,
-    and feature-importance explainability an LLM call can't match at
-    this cost/latency budget.
-  - Time-based split (not random shuffle) — train on the first 70% of
-    days, test on the last 30%. Random splits leak future information
-    into training for time-series-like fraud data; this doesn't.
-  - class_weight balancing instead of naive oversampling, to avoid
-    duplicating the same fraud burst many times over (which would let
-    the model memorize specific transactions instead of the pattern).
+Design choices & evaluation methodology:
+  - Chronological Split: 60% Train, 20% Validation, 20% Final Test based on timestamp order.
+  - Model Training: GradientBoostingClassifier trained exclusively on the 60% Train split.
+  - Threshold Selection: Decision threshold tuned exclusively on the 20% Validation split
+    by maximizing F1 score.
+  - Final Evaluation: Performance metrics (Precision, Recall, F1, ROC-AUC, FPR, Review Rate,
+    and Financial Savings) measured exclusively on the untouched 20% Final Test split.
+  - Baseline Model: Plain Logistic Regression baseline trained on Train and evaluated on Final Test.
 """
 
 import os
@@ -36,85 +33,137 @@ DATA_PATH = os.path.join(BASE_DIR, "data", "transactions.csv")
 MODEL_PATH = os.path.join(BASE_DIR, "model", "model.pkl")
 METRICS_PATH = os.path.join(BASE_DIR, "model", "metrics.json")
 
-# Business assumption used for false-positive cost framing (documented,
-# not hidden): a legit transaction incorrectly held costs ~$4 in support/
-# friction; a missed fraud transaction costs its full average amount.
+# Business assumption: $4.00 friction cost per false positive transaction
 FP_COST = 4.0
 
 
-def time_based_split(df, test_frac=0.3):
-    df = df.sort_values("timestamp")
-    split_idx = int(len(df) * (1 - test_frac))
-    return df.iloc[:split_idx], df.iloc[split_idx:]
+def chronological_split(df, train_frac=0.6, val_frac=0.2):
+    df = df.sort_values("timestamp").reset_index(drop=True)
+    n = len(df)
+    train_end = int(n * train_frac)
+    val_end = int(n * (train_frac + val_frac))
+
+    train_df = df.iloc[:train_end].copy()
+    val_df = df.iloc[train_end:val_end].copy()
+    test_df = df.iloc[val_end:].copy()
+
+    return train_df, val_df, test_df
 
 
 def main():
     raw = pd.read_csv(DATA_PATH, parse_dates=["timestamp"])
     df, feature_cols = engineer_features(raw)
 
-    train_df, test_df = time_based_split(df)
+    train_df, val_df, test_df = chronological_split(df, 0.6, 0.2)
+
     X_train, y_train = train_df[feature_cols], train_df["label"]
+    X_val, y_val = val_df[feature_cols], val_df["label"]
     X_test, y_test = test_df[feature_cols], test_df["label"]
 
-    print(f"Train: {len(X_train)} rows ({y_train.sum()} fraud)")
-    print(f"Test:  {len(X_test)} rows ({y_test.sum()} fraud)")
+    print(f"Train:      {len(X_train)} rows ({y_train.sum()} fraud) [{train_df['timestamp'].min()} to {train_df['timestamp'].max()}]")
+    print(f"Validation: {len(X_val)} rows ({y_val.sum()} fraud) [{val_df['timestamp'].min()} to {val_df['timestamp'].max()}]")
+    print(f"Final Test: {len(X_test)} rows ({y_test.sum()} fraud) [{test_df['timestamp'].min()} to {test_df['timestamp'].max()}]")
 
-    # --- Baseline: plain logistic regression (documented comparison) ---
+    # --- Baseline: plain logistic regression on Train ---
     baseline = LogisticRegression(class_weight="balanced", max_iter=1000)
     baseline.fit(X_train, y_train)
-    baseline_probs = baseline.predict_proba(X_test)[:, 1]
-    baseline_preds = (baseline_probs >= 0.5).astype(int)
+    baseline_probs_test = baseline.predict_proba(X_test)[:, 1]
+    baseline_preds_test = (baseline_probs_test >= 0.5).astype(int)
 
-    # --- Main model: gradient boosting ---
-    # sample_weight for class balance since GradientBoostingClassifier
-    # doesn't support class_weight directly
-    sample_weight = np.where(y_train == 1, (y_train == 0).sum() / (y_train == 1).sum(), 1.0)
+    # --- Main model: gradient boosting on Train ---
+    sample_weight = np.where(y_train == 1, (y_train == 0).sum() / max(1, (y_train == 1).sum()), 1.0)
     model = GradientBoostingClassifier(
         n_estimators=150, max_depth=3, learning_rate=0.1, random_state=42
     )
     model.fit(X_train, y_train, sample_weight=sample_weight)
-    probs = model.predict_proba(X_test)[:, 1]
 
-    # --- Threshold selection: pick threshold that maximizes F1 on test PR curve ---
-    prec_arr, rec_arr, thresh_arr = precision_recall_curve(y_test, probs)
+    # --- Threshold selection: pick threshold that maximizes F1 on VALIDATION set ---
+    val_probs = model.predict_proba(X_val)[:, 1]
+    prec_arr, rec_arr, thresh_arr = precision_recall_curve(y_val, val_probs)
     f1_arr = 2 * prec_arr * rec_arr / (prec_arr + rec_arr + 1e-9)
     best_idx = np.argmax(f1_arr[:-1]) if len(thresh_arr) > 0 else 0
-    best_threshold = thresh_arr[best_idx] if len(thresh_arr) > 0 else 0.5
+    balanced_threshold = float(thresh_arr[best_idx]) if len(thresh_arr) > 0 else 0.5
 
-    preds = (probs >= best_threshold).astype(int)
+    # Define policy mode thresholds
+    strict_threshold = round(float(max(0.001, balanced_threshold * 0.5)), 4)
+    frictionless_threshold = round(float(min(0.5, balanced_threshold * 2.0)), 4)
+    balanced_threshold = round(float(balanced_threshold), 4)
 
-    tn, fp, fn, tp = confusion_matrix(y_test, preds).ravel()
-    precision = precision_score(y_test, preds, zero_division=0)
-    recall = recall_score(y_test, preds, zero_division=0)
-    f1 = f1_score(y_test, preds, zero_division=0)
-    auc = roc_auc_score(y_test, probs)
+    print(f"Selected Threshold on Validation (BALANCED): {balanced_threshold}")
+    print(f"Policy Cutoffs -> STRICT: {strict_threshold}, BALANCED: {balanced_threshold}, FRICTIONLESS: {frictionless_threshold}")
 
-    avg_fraud_amount = test_df.loc[y_test == 1, "amount"].mean()
-    fp_cost_total = fp * FP_COST
-    fraud_caught_value = tp * avg_fraud_amount
-    fraud_missed_value = fn * avg_fraud_amount
+    # --- Final Evaluation: untouched FINAL TEST set ---
+    test_probs = model.predict_proba(X_test)[:, 1]
+    test_preds = (test_probs >= balanced_threshold).astype(int)
 
-    baseline_precision = precision_score(y_test, baseline_preds, zero_division=0)
-    baseline_recall = recall_score(y_test, baseline_preds, zero_division=0)
-    baseline_auc = roc_auc_score(y_test, baseline_probs)
+    tn, fp, fn, tp = confusion_matrix(y_test, test_preds).ravel()
+    precision = precision_score(y_test, test_preds, zero_division=0)
+    recall = recall_score(y_test, test_preds, zero_division=0)
+    f1 = f1_score(y_test, test_preds, zero_division=0)
+    auc = roc_auc_score(y_test, test_probs)
+    fpr = float(fp / (fp + tn)) if (fp + tn) > 0 else 0.0
+    review_rate = float((tp + fp) / len(y_test))
+
+    # Exact financial calculations on final test set
+    fraud_caught_value = float(test_df.loc[(y_test == 1) & (test_preds == 1), "amount"].sum())
+    fraud_missed_value = float(test_df.loc[(y_test == 1) & (test_preds == 0), "amount"].sum())
+    fp_cost_total = float(fp * FP_COST)
+    net_savings = float(fraud_caught_value - fraud_missed_value - fp_cost_total)
+
+    # Baseline logistic regression on final test set
+    baseline_precision = precision_score(y_test, baseline_preds_test, zero_division=0)
+    baseline_recall = recall_score(y_test, baseline_preds_test, zero_division=0)
+    baseline_f1 = f1_score(y_test, baseline_preds_test, zero_division=0)
+    baseline_auc = roc_auc_score(y_test, baseline_probs_test)
 
     metrics = {
         "model": "GradientBoostingClassifier",
-        "threshold": round(float(best_threshold), 4),
+        "threshold": balanced_threshold,
+        "policy_thresholds": {
+            "STRICT": strict_threshold,
+            "BALANCED": balanced_threshold,
+            "FRICTIONLESS": frictionless_threshold
+        },
+        "split_metadata": {
+            "methodology": "Chronological 60% Train / 20% Validation / 20% Final Test",
+            "threshold_selection": "Time-based validation set used for threshold selection; final chronological test set used for performance measurement.",
+            "train": {
+                "count": int(len(X_train)),
+                "fraud_count": int(y_train.sum()),
+                "start": str(train_df["timestamp"].min()),
+                "end": str(train_df["timestamp"].max())
+            },
+            "validation": {
+                "count": int(len(X_val)),
+                "fraud_count": int(y_val.sum()),
+                "start": str(val_df["timestamp"].min()),
+                "end": str(val_df["timestamp"].max())
+            },
+            "final_test": {
+                "count": int(len(X_test)),
+                "fraud_count": int(y_test.sum()),
+                "start": str(test_df["timestamp"].min()),
+                "end": str(test_df["timestamp"].max())
+            }
+        },
         "test_set_size": int(len(y_test)),
         "test_set_fraud_count": int(y_test.sum()),
         "precision": round(float(precision), 4),
         "recall": round(float(recall), 4),
         "f1": round(float(f1), 4),
         "roc_auc": round(float(auc), 4),
+        "fpr": round(float(fpr), 4),
+        "review_rate": round(float(review_rate), 4),
         "confusion_matrix": {"tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp)},
         "false_positive_cost_assumption_usd": FP_COST,
         "estimated_fp_cost_total_usd": round(float(fp_cost_total), 2),
         "estimated_fraud_value_caught_usd": round(float(fraud_caught_value), 2),
         "estimated_fraud_value_missed_usd": round(float(fraud_missed_value), 2),
+        "net_financial_savings_usd": round(float(net_savings), 2),
         "baseline_logistic_regression": {
             "precision": round(float(baseline_precision), 4),
             "recall": round(float(baseline_recall), 4),
+            "f1": round(float(baseline_f1), 4),
             "roc_auc": round(float(baseline_auc), 4),
         },
         "feature_importances": dict(sorted(
@@ -126,7 +175,12 @@ def main():
     with open(METRICS_PATH, "w") as f:
         json.dump(metrics, f, indent=2)
 
-    joblib.dump({"model": model, "feature_cols": feature_cols, "threshold": best_threshold}, MODEL_PATH)
+    joblib.dump({
+        "model": model,
+        "feature_cols": feature_cols,
+        "threshold": balanced_threshold,
+        "policy_thresholds": metrics["policy_thresholds"]
+    }, MODEL_PATH)
 
     print(json.dumps(metrics, indent=2))
     return metrics
