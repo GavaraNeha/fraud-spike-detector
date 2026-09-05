@@ -63,7 +63,7 @@ To prevent time-series data leakage, the transaction dataset is ordered chronolo
 | **Baseline Logistic Regression** | 95.6% | 97.3% | 0.9643 | 0.9994 |
 | **Deployed Gradient Boosting** | 95.3% | 91.0% | 0.9309 | 0.9928 |
 
-*Key Finding:* A simpler Logistic Regression baseline matched or slightly outperformed Gradient Boosting on this test set, demonstrating that domain feature engineering (velocity bursts, z-scores) carries more weight than raw model depth.
+*Key Finding:* A simpler Logistic Regression baseline matched or slightly outperformed Gradient Boosting on this test set, demonstrating that domain feature engineering (velocity bursts, z-scores) carries more weight than raw model depth. Gradient Boosting was the initial architecture choice built into the production prototype and LR's performance advantage was only discovered during final benchmark evaluation, making Logistic Regression the prime candidate for the next model iteration.
 
 ---
 
