@@ -1,6 +1,7 @@
 {
   "model": "GradientBoostingClassifier",
   "threshold": 0.016,
+  "train_cutoff": "2026-08-20 04:27:22.578070",
   "policy_thresholds": {
     "STRICT": 0.008,
     "BALANCED": 0.016,

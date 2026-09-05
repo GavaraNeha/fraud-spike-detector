@@ -52,7 +52,11 @@ def chronological_split(df, train_frac=0.6, val_frac=0.2):
 
 def main():
     raw = pd.read_csv(DATA_PATH, parse_dates=["timestamp"])
-    df, feature_cols = engineer_features(raw)
+    raw_sorted = raw.sort_values("timestamp").reset_index(drop=True)
+    train_end_idx = int(len(raw_sorted) * 0.6)
+    train_cutoff = raw_sorted.iloc[:train_end_idx]["timestamp"].max()
+
+    df, feature_cols = engineer_features(raw_sorted, train_cutoff=train_cutoff)
 
     train_df, val_df, test_df = chronological_split(df, 0.6, 0.2)
 
@@ -119,6 +123,7 @@ def main():
     metrics = {
         "model": "GradientBoostingClassifier",
         "threshold": balanced_threshold,
+        "train_cutoff": str(train_cutoff),
         "policy_thresholds": {
             "STRICT": strict_threshold,
             "BALANCED": balanced_threshold,
@@ -179,7 +184,8 @@ def main():
         "model": model,
         "feature_cols": feature_cols,
         "threshold": balanced_threshold,
-        "policy_thresholds": metrics["policy_thresholds"]
+        "policy_thresholds": metrics["policy_thresholds"],
+        "train_cutoff": str(train_cutoff)
     }, MODEL_PATH)
 
     print(json.dumps(metrics, indent=2))

@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 
 
-def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
+def engineer_features(df: pd.DataFrame, train_cutoff=None) -> pd.DataFrame:
     df = df.copy()
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df = df.sort_values("timestamp").reset_index(drop=True)
@@ -28,8 +28,19 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
         .apply(lambda s: s.shift(1).expanding().std())
         .reset_index(level=0, drop=True)
     )
-    df["merchant_amount_mean"] = df["merchant_amount_mean"].fillna(df["amount"].median())
-    df["merchant_amount_std"] = df["merchant_amount_std"].fillna(df["amount"].std()).replace(0, 1e-6)
+    if train_cutoff is not None:
+        train_cutoff_ts = pd.to_datetime(train_cutoff)
+        cutoff_df = df[df["timestamp"] <= train_cutoff_ts]
+        if len(cutoff_df) == 0:
+            cutoff_df = df
+    else:
+        cutoff_df = df
+
+    fallback_median = cutoff_df["amount"].median()
+    fallback_std = cutoff_df["amount"].std()
+
+    df["merchant_amount_mean"] = df["merchant_amount_mean"].fillna(fallback_median)
+    df["merchant_amount_std"] = df["merchant_amount_std"].fillna(fallback_std).replace(0, 1e-6)
     df["amount_zscore"] = (df["amount"] - df["merchant_amount_mean"]) / df["merchant_amount_std"]
     df["amount_zscore"] = df["amount_zscore"].clip(-10, 10)
 
