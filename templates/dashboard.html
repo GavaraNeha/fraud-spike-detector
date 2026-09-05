@@ -1027,21 +1027,26 @@
   </div>
 
   <!-- Synthetic Live Stream Control Bar -->
-  <div style="background: var(--panel); border: 1px solid var(--hairline); border-left: 4px solid var(--electric-cyan); border-radius: 8px; padding: 12px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: var(--card-shadow);">
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <span class="status-banner-badge" style="background: var(--nav-active-bg); color: var(--electric-cyan); border-color: var(--cyan-glow);">
-        <span class="cyan-pulse-dot" id="liveStreamDot"></span>
-        SYNTHETIC LIVE STREAM
-      </span>
-      <span style="font-size: 12.5px; color: var(--text-dim);">Live synthetic transaction stream for demonstration.</span>
+  <div style="background: var(--panel); border: 1px solid var(--hairline); border-left: 4px solid var(--electric-cyan); border-radius: 8px; padding: 12px 18px; margin-bottom: 20px; box-shadow: var(--card-shadow);">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="status-banner-badge" style="background: var(--nav-active-bg); color: var(--electric-cyan); border-color: var(--cyan-glow);">
+          <span class="cyan-pulse-dot" id="liveStreamDot"></span>
+          SYNTHETIC LIVE STREAM
+        </span>
+        <span style="font-size: 12.5px; color: var(--text-dim);">Live synthetic transaction stream for demonstration.</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button id="btnLiveStreamToggle" onclick="toggleLiveStream()" class="filter-btn" style="font-family: var(--mono); font-weight: 600;">
+          ⚡ Live Stream: OFF
+        </button>
+        <button onclick="stepLiveStream()" class="filter-btn" style="color: var(--electric-cyan); border-color: var(--electric-cyan); font-family: var(--mono); font-weight: 600;">
+          + Step 1 Event
+        </button>
+      </div>
     </div>
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <button id="btnLiveStreamToggle" onclick="toggleLiveStream()" class="filter-btn" style="font-family: var(--mono); font-weight: 600;">
-        ⚡ Live Stream: OFF
-      </button>
-      <button onclick="stepLiveStream()" class="filter-btn" style="color: var(--electric-cyan); border-color: var(--electric-cyan); font-family: var(--mono); font-weight: 600;">
-        + Step 1 Event
-      </button>
+    <div style="font-size: 11px; color: var(--text-dim); margin-top: 8px; border-top: 1px dashed var(--hairline); padding-top: 6px;">
+      * Each live transaction is scored through the same feature engineering and model pipeline as historical data, evaluating velocity features against the pre-loaded historical window rather than live-session accumulation.
     </div>
   </div>
 
