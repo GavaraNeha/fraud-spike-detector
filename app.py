@@ -9,12 +9,14 @@ Endpoints:
   POST /api/score                  -> score single transaction JSON payload
   GET  /api/policy                 -> active risk posture policy (STRICT, BALANCED, FRICTIONLESS)
   POST /api/policy                 -> update active risk posture policy mode
+  GET  /api/system_health          -> operational telemetry health state
   GET  /api/live_stream/status     -> synthetic live stream status & buffer
   POST /api/live_stream/next       -> generate & score next synthetic live stream transaction
   POST /api/live_stream/toggle     -> toggle synthetic live stream state
   GET  /api/threshold_eval         -> precision/recall/F1/cost trade-offs across thresholds
   GET  /api/audit_trail            -> SQLite persistent decision audit trail
   POST /api/failure_lab/fallback   -> simulate model failure and fallback rules
+  POST /api/failure_lab/reset      -> reset model failure status to ONLINE
   POST /api/failure_lab/duplicate  -> simulate duplicate transaction event
   POST /api/failure_lab/borderline -> simulate borderline score scenario
 """
@@ -61,6 +63,8 @@ _raw = pd.read_csv(DATA_PATH, parse_dates=["timestamp"])
 _scored_df, _ = engineer_features(_raw)
 
 ACTIVE_POLICY_MODE = "BALANCED"
+MODEL_STATUS = "ONLINE"
+FALLBACK_STATUS = "ARMED"
 LIVE_STREAM_ACTIVE = False
 LIVE_STREAM_BUFFER = []
 
@@ -198,6 +202,30 @@ def api_policy():
         "active_policy_mode": ACTIVE_POLICY_MODE,
         "active_threshold": get_active_threshold(),
         "policy_thresholds": POLICY_THRESHOLDS
+    })
+
+
+@app.route("/api/system_health")
+def api_system_health():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM audit_events")
+        count = cursor.fetchone()[0]
+        conn.close()
+        audit_status = "HEALTHY"
+    except Exception:
+        count = 0
+        audit_status = "DEGRADED"
+
+    return jsonify({
+        "model_status": MODEL_STATUS,
+        "scoring_api": "HEALTHY",
+        "audit_store": audit_status,
+        "audit_event_count": count,
+        "fallback_status": FALLBACK_STATUS,
+        "active_policy_mode": ACTIVE_POLICY_MODE,
+        "active_threshold": get_active_threshold()
     })
 
 
@@ -346,7 +374,10 @@ def api_audit_trail():
 
 @app.route("/api/failure_lab/fallback", methods=["POST"])
 def api_failure_fallback():
-    payload = request.get_json(force=True)
+    global MODEL_STATUS, FALLBACK_STATUS
+    MODEL_STATUS = "UNAVAILABLE"
+    FALLBACK_STATUS = "ACTIVE"
+    payload = request.get_json(silent=True) or {}
     amount = float(payload.get("amount", 6500.0))
     device_known = bool(payload.get("device_is_known", False))
     
@@ -370,13 +401,27 @@ def api_failure_fallback():
 
     return jsonify({
         "mode": "FALLBACK_HEURISTIC",
-        "model_status": "UNAVAILABLE_SIMULATED",
+        "model_status": "UNAVAILABLE",
+        "fallback_status": "ACTIVE",
         "transaction_id": txn_id,
         "rule_executed": "Amount > $5,000 AND Unknown Device",
         "amount": amount,
         "device_is_known": device_known,
         "flagged": rule_triggered,
         "reason": "Simulated primary ML model server timeout. Fallback risk policy activated."
+    })
+
+
+@app.route("/api/failure_lab/reset", methods=["POST"])
+def api_failure_reset():
+    global MODEL_STATUS, FALLBACK_STATUS
+    MODEL_STATUS = "ONLINE"
+    FALLBACK_STATUS = "ARMED"
+    return jsonify({
+        "status": "success",
+        "model_status": MODEL_STATUS,
+        "fallback_status": FALLBACK_STATUS,
+        "message": "Model scoring service restored to ONLINE status."
     })
 
 
@@ -427,8 +472,44 @@ def api_failure_borderline():
 
 
 def api_score_internal(payload, source="MANUAL"):
+    global MODEL_STATUS, FALLBACK_STATUS
+
     txn_id = payload.get("transaction_id", f"DEMO_{int(time.time()*1000)}")
     curr_thresh = get_active_threshold()
+
+    if MODEL_STATUS == "UNAVAILABLE":
+        amt = float(payload.get("amount", 0.0))
+        device_known = bool(payload.get("device_is_known", False))
+        rule_triggered = (amt > 5000.0) and (not device_known)
+        decision = "FLAGGED" if rule_triggered else "CLEAR"
+        exec_mode = "FALLBACK HEURISTIC (Rule: Amt>$5k & Device Unknown)"
+        timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        res = {
+            "is_duplicate": False,
+            "transaction_id": txn_id,
+            "amount": amt,
+            "merchant_id": payload.get("merchant_id", 0),
+            "fraud_probability": 0.9990 if rule_triggered else 0.0010,
+            "flagged": rule_triggered,
+            "decision": decision,
+            "threshold_used": 5000.0,
+            "policy_mode": ACTIVE_POLICY_MODE,
+            "execution_mode": exec_mode
+        }
+        db_insert_audit_event({
+            "timestamp": timestamp_str,
+            "transaction_id": txn_id,
+            "merchant_id": payload.get("merchant_id", 0),
+            "amount": amt,
+            "fraud_probability": res["fraud_probability"],
+            "threshold": 5000.0,
+            "decision": decision,
+            "policy_mode": ACTIVE_POLICY_MODE,
+            "execution_mode": exec_mode,
+            "status_reason": f"Fallback rule decision: {decision}"
+        })
+        return res
 
     if not payload.get("force_new", False):
         prev = db_get_transaction(txn_id)
