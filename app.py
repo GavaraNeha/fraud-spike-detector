@@ -6,7 +6,9 @@ Endpoints:
   GET  /                  -> dashboard UI
   GET  /api/metrics        -> model performance metrics (from training)
   GET  /api/transactions    -> scored test-set transactions (with full feature set)
-  POST /api/score          -> score a single transaction JSON payload (with SQLite audit logging)
+  POST /api/score          -> score a single transaction JSON payload (with active policy threshold)
+  GET  /api/policy         -> view active risk posture policy (STRICT, BALANCED, FRICTIONLESS)
+  POST /api/policy         -> update active risk posture policy mode
   GET  /api/threshold_eval -> precision/recall/F1/cost trade-offs across thresholds
   GET  /api/audit_trail    -> SQLite persistent decision audit trail
   POST /api/failure_lab/fallback -> simulate model failure and fallback rules
@@ -41,15 +43,25 @@ DB_PATH = str(BASE_DIR / "data" / "audit_trail.db")
 bundle = joblib.load(MODEL_PATH)
 model = bundle["model"]
 feature_cols = bundle["feature_cols"]
-threshold = bundle["threshold"]
+base_threshold = bundle["threshold"]
+POLICY_THRESHOLDS = bundle.get("policy_thresholds", {
+    "STRICT": round(base_threshold * 0.5, 4),
+    "BALANCED": round(base_threshold, 4),
+    "FRICTIONLESS": round(min(0.5, base_threshold * 2.0), 4)
+})
 
 with open(METRICS_PATH) as f:
     METRICS = json.load(f)
 
 _raw = pd.read_csv(DATA_PATH, parse_dates=["timestamp"])
 _scored_df, _ = engineer_features(_raw)
-_scored_df["fraud_probability"] = model.predict_proba(_scored_df[feature_cols])[:, 1]
-_scored_df["flagged"] = (_scored_df["fraud_probability"] >= threshold).astype(int)
+
+ACTIVE_POLICY_MODE = "BALANCED"
+
+
+def get_active_threshold():
+    return POLICY_THRESHOLDS.get(ACTIVE_POLICY_MODE, base_threshold)
+
 
 # --- SQLite Database Initialization ---
 def init_db():
@@ -107,7 +119,7 @@ def db_insert_audit_event(event_dict):
             event_dict["fraud_probability"],
             event_dict["threshold"],
             event_dict["decision"],
-            event_dict.get("policy_mode", "BALANCED"),
+            event_dict.get("policy_mode", ACTIVE_POLICY_MODE),
             event_dict["execution_mode"],
             event_dict["status_reason"],
             1 if event_dict.get("is_duplicate") else 0,
@@ -140,10 +152,11 @@ def db_get_audit_trail(limit=200):
     return out
 
 
-def get_test_split():
-    df = _scored_df.sort_values("timestamp")
-    split_idx = int(len(df) * 0.8)
-    return df.iloc[split_idx:]
+def compute_scored_df(curr_threshold):
+    df = _scored_df.copy()
+    df["fraud_probability"] = model.predict_proba(df[feature_cols])[:, 1]
+    df["flagged"] = (df["fraud_probability"] >= curr_threshold).astype(int)
+    return df
 
 
 @app.route("/")
@@ -153,7 +166,33 @@ def dashboard():
 
 @app.route("/api/metrics")
 def api_metrics():
-    return jsonify(METRICS)
+    out_metrics = dict(METRICS)
+    out_metrics["active_policy_mode"] = ACTIVE_POLICY_MODE
+    out_metrics["active_threshold"] = get_active_threshold()
+    return jsonify(out_metrics)
+
+
+@app.route("/api/policy", methods=["GET", "POST"])
+def api_policy():
+    global ACTIVE_POLICY_MODE
+    if request.method == "POST":
+        payload = request.get_json(force=True)
+        mode = payload.get("mode", "BALANCED").upper()
+        if mode in POLICY_THRESHOLDS:
+            ACTIVE_POLICY_MODE = mode
+            return jsonify({
+                "status": "success",
+                "active_policy_mode": ACTIVE_POLICY_MODE,
+                "active_threshold": get_active_threshold(),
+                "policy_thresholds": POLICY_THRESHOLDS
+            })
+        return jsonify({"error": "Invalid policy mode"}), 400
+
+    return jsonify({
+        "active_policy_mode": ACTIVE_POLICY_MODE,
+        "active_threshold": get_active_threshold(),
+        "policy_thresholds": POLICY_THRESHOLDS
+    })
 
 
 @app.route("/api/transactions")
@@ -161,7 +200,7 @@ def api_transactions():
     limit = int(request.args.get("limit", 200))
     offset = int(request.args.get("offset", 0))
     only_flagged = request.args.get("flagged", "false").lower() == "true"
-    df = _scored_df.sort_values("timestamp", ascending=False)
+    df = compute_scored_df(get_active_threshold()).sort_values("timestamp", ascending=False)
     if only_flagged:
         df = df[df["flagged"] == 1]
     cols = ["transaction_id", "merchant_id", "timestamp", "amount",
@@ -185,14 +224,17 @@ def api_score():
 
 @app.route("/api/threshold_eval")
 def api_threshold_eval():
-    test_df = get_test_split()
+    df = compute_scored_df(get_active_threshold())
+    split_idx = int(len(df) * 0.8)
+    test_df = df.iloc[split_idx:]
     y_test = test_df["label"].values
     probs = test_df["fraud_probability"].values
     avg_fraud_amt = test_df.loc[test_df["label"] == 1, "amount"].mean()
     fp_cost_unit = METRICS.get("false_positive_cost_assumption_usd", 4.0)
 
-    test_thresholds = [0.002, 0.005, 0.016, 0.025, 0.05, 0.10, 0.20, 0.40]
+    test_thresholds = [0.002, 0.005, 0.008, 0.016, 0.032, 0.05, 0.10, 0.20, 0.40]
     eval_results = []
+    curr_active = get_active_threshold()
 
     for t in test_thresholds:
         preds = (probs >= t).astype(int)
@@ -216,18 +258,18 @@ def api_threshold_eval():
             "fp_cost_usd": round(fp_cost_total, 2),
             "fraud_caught_usd": round(fraud_caught_val, 2),
             "net_savings_usd": round(net_savings, 2),
-            "is_deployed": bool(abs(t - threshold) < 1e-4)
+            "is_deployed": bool(abs(t - curr_active) < 1e-4)
         })
 
     return jsonify({
-        "deployed_threshold": round(float(threshold), 4),
+        "deployed_threshold": round(float(curr_active), 4),
+        "active_policy_mode": ACTIVE_POLICY_MODE,
         "evaluations": eval_results
     })
 
 
 @app.route("/api/audit_trail")
 def api_audit_trail():
-    """Return persistent decision audit trail from SQLite database."""
     limit = int(request.args.get("limit", 200))
     trail = db_get_audit_trail(limit=limit)
     return jsonify(trail)
@@ -252,7 +294,7 @@ def api_failure_fallback():
         "fraud_probability": 0.9990 if rule_triggered else 0.0010,
         "threshold": 5000.0,
         "decision": decision,
-        "policy_mode": "BALANCED",
+        "policy_mode": ACTIVE_POLICY_MODE,
         "execution_mode": "FALLBACK HEURISTIC (Rule: Amt>$5k & Device Unknown)",
         "status_reason": f"Fallback rule decision: {decision}"
     })
@@ -296,6 +338,7 @@ def api_failure_duplicate():
 
 @app.route("/api/failure_lab/borderline", methods=["POST"])
 def api_failure_borderline():
+    curr_thresh = get_active_threshold()
     payload = {
         "amount": 185.00,
         "merchant_id": 2,
@@ -308,16 +351,16 @@ def api_failure_borderline():
     return jsonify({
         "scenario": "BORDERLINE_CONFIDENCE_SCORE",
         "score_result": res,
-        "threshold": threshold,
-        "margin": round(abs(res["fraud_probability"] - threshold), 4),
-        "guidance": "Probability lands within borderline margin of threshold (±0.008). System flags for priority compliance officer review."
+        "active_threshold": curr_thresh,
+        "margin": round(abs(res["fraud_probability"] - curr_thresh), 4),
+        "guidance": f"Probability lands within borderline margin of threshold (±0.008). System flags for compliance review."
     })
 
 
 def api_score_internal(payload):
     txn_id = payload.get("transaction_id", f"DEMO_{int(time.time()*1000)}")
-    
-    # SQLite idempotency lookup
+    curr_thresh = get_active_threshold()
+
     if not payload.get("force_new", False):
         prev = db_get_transaction(txn_id)
         if prev:
@@ -329,6 +372,7 @@ def api_score_internal(payload):
                 "flagged": bool(prev["decision"] in ["FLAGGED", "Automated Flag"]),
                 "decision": prev["decision"],
                 "threshold_used": prev["threshold"],
+                "policy_mode": prev["policy_mode"],
                 "note": "Idempotent duplicate response — retained original score result."
             }
 
@@ -345,7 +389,7 @@ def api_score_internal(payload):
     feats, _ = engineer_features(combined)
     last_row = feats.iloc[[-1]][feature_cols]
     prob = float(model.predict_proba(last_row)[:, 1][0])
-    flagged = bool(prob >= threshold)
+    flagged = bool(prob >= curr_thresh)
     
     timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     res = {
@@ -354,7 +398,8 @@ def api_score_internal(payload):
         "fraud_probability": round(prob, 4),
         "flagged": flagged,
         "decision": "FLAGGED" if flagged else "CLEAR",
-        "threshold_used": round(float(threshold), 4)
+        "threshold_used": round(float(curr_thresh), 4),
+        "policy_mode": ACTIVE_POLICY_MODE
     }
     
     db_insert_audit_event({
@@ -363,10 +408,10 @@ def api_score_internal(payload):
         "amount": float(payload["amount"]),
         "merchant_id": payload.get("merchant_id", 0),
         "fraud_probability": round(prob, 4),
-        "threshold": round(float(threshold), 4),
+        "threshold": round(float(curr_thresh), 4),
         "decision": "FLAGGED" if flagged else "CLEAR",
-        "policy_mode": "BALANCED",
-        "execution_mode": "ML Model (GradientBoosting)",
+        "policy_mode": ACTIVE_POLICY_MODE,
+        "execution_mode": f"ML Model (GradientBoosting - Policy: {ACTIVE_POLICY_MODE})",
         "status_reason": "Automated Flag" if flagged else "Automated Clear"
     })
     return res
