@@ -6,9 +6,9 @@ Endpoints:
   GET  /                  -> dashboard UI
   GET  /api/metrics        -> model performance metrics (from training)
   GET  /api/transactions    -> scored test-set transactions (with full feature set)
-  POST /api/score          -> score a single transaction JSON payload (with audit logging)
+  POST /api/score          -> score a single transaction JSON payload (with SQLite audit logging)
   GET  /api/threshold_eval -> precision/recall/F1/cost trade-offs across thresholds
-  GET  /api/audit_trail    -> session history of scored transactions
+  GET  /api/audit_trail    -> SQLite persistent decision audit trail
   POST /api/failure_lab/fallback -> simulate model failure and fallback rules
   POST /api/failure_lab/duplicate -> simulate duplicate transaction event
   POST /api/failure_lab/borderline -> simulate borderline score scenario
@@ -18,13 +18,13 @@ import json
 import os
 import sys
 import time
+import sqlite3
 import joblib
 import pandas as pd
 import numpy as np
 from datetime import datetime
 from flask import Flask, jsonify, render_template, request
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
-
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -36,6 +36,7 @@ app = Flask(__name__)
 MODEL_PATH = str(BASE_DIR / "model" / "model.pkl")
 METRICS_PATH = str(BASE_DIR / "model" / "metrics.json")
 DATA_PATH = str(BASE_DIR / "data" / "transactions.csv")
+DB_PATH = str(BASE_DIR / "data" / "audit_trail.db")
 
 bundle = joblib.load(MODEL_PATH)
 model = bundle["model"]
@@ -50,14 +51,98 @@ _scored_df, _ = engineer_features(_raw)
 _scored_df["fraud_probability"] = model.predict_proba(_scored_df[feature_cols])[:, 1]
 _scored_df["flagged"] = (_scored_df["fraud_probability"] >= threshold).astype(int)
 
-# Session audit trail store & duplicate cache
-AUDIT_TRAIL = []
-SEEN_TRANSACTIONS = {}
+# --- SQLite Database Initialization ---
+def init_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS audit_events (
+            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            transaction_id TEXT UNIQUE NOT NULL,
+            merchant_id INTEGER NOT NULL,
+            amount REAL NOT NULL,
+            fraud_probability REAL NOT NULL,
+            threshold REAL NOT NULL,
+            decision TEXT NOT NULL,
+            policy_mode TEXT NOT NULL DEFAULT 'BALANCED',
+            execution_mode TEXT NOT NULL,
+            status_reason TEXT NOT NULL,
+            is_duplicate INTEGER DEFAULT 0,
+            risk_signals TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
+
+
+def db_get_transaction(txn_id):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM audit_events WHERE transaction_id = ?", (txn_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return dict(row)
+    return None
+
+
+def db_insert_audit_event(event_dict):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO audit_events 
+            (timestamp, transaction_id, merchant_id, amount, fraud_probability, threshold, decision, policy_mode, execution_mode, status_reason, is_duplicate, risk_signals)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            event_dict["timestamp"],
+            event_dict["transaction_id"],
+            event_dict["merchant_id"],
+            event_dict["amount"],
+            event_dict["fraud_probability"],
+            event_dict["threshold"],
+            event_dict["decision"],
+            event_dict.get("policy_mode", "BALANCED"),
+            event_dict["execution_mode"],
+            event_dict["status_reason"],
+            1 if event_dict.get("is_duplicate") else 0,
+            json.dumps(event_dict.get("risk_signals", {}))
+        ))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        pass
+    finally:
+        conn.close()
+
+
+def db_get_audit_trail(limit=200):
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM audit_events ORDER BY event_id DESC LIMIT ?", (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    out = []
+    for r in rows:
+        d = dict(r)
+        if d.get("risk_signals"):
+            try:
+                d["risk_signals"] = json.loads(d["risk_signals"])
+            except Exception:
+                pass
+        d["flagged"] = bool(d["decision"] in ["FLAGGED", "Rule Flagged", "Automated Flag"])
+        out.append(d)
+    return out
 
 
 def get_test_split():
     df = _scored_df.sort_values("timestamp")
-    split_idx = int(len(df) * 0.7)
+    split_idx = int(len(df) * 0.8)
     return df.iloc[split_idx:]
 
 
@@ -93,82 +178,20 @@ def api_transactions():
 
 @app.route("/api/score", methods=["POST"])
 def api_score():
-    """Score a single transaction. Expects JSON with raw transaction fields."""
     payload = request.get_json(force=True)
-    txn_id = payload.get("transaction_id", f"LIVE_{int(time.time()*1000)}")
-    
-    # Check duplicate transaction submission
-    if txn_id in SEEN_TRANSACTIONS and not payload.get("force_new", False):
-        prev = SEEN_TRANSACTIONS[txn_id]
-        return jsonify({
-            "is_duplicate": True,
-            "transaction_id": txn_id,
-            "first_seen": prev["timestamp"],
-            "fraud_probability": prev["fraud_probability"],
-            "flagged": prev["flagged"],
-            "threshold_used": prev["threshold_used"],
-            "note": "Idempotent duplicate response — retained original score result."
-        })
-
-    try:
-        row = pd.DataFrame([{
-            "merchant_id": payload.get("merchant_id", 0),
-            "timestamp": payload.get("timestamp", pd.Timestamp.now()),
-            "amount": float(payload["amount"]),
-            "device_id": payload.get("device_id", -1),
-            "device_is_known": bool(payload.get("device_is_known", True)),
-            "ip_country_match": bool(payload.get("ip_country_match", True)),
-            "label": 0,
-        }])
-        combined = pd.concat([_raw, row], ignore_index=True)
-        feats, _ = engineer_features(combined)
-        last_row = feats.iloc[[-1]][feature_cols]
-        prob = float(model.predict_proba(last_row)[:, 1][0])
-        flagged = bool(prob >= threshold)
-        
-        # Borderline check (within 0.008 of threshold)
-        is_borderline = bool(abs(prob - threshold) <= 0.008)
-
-        res = {
-            "transaction_id": txn_id,
-            "fraud_probability": round(prob, 4),
-            "flagged": flagged,
-            "threshold_used": round(float(threshold), 4),
-            "is_borderline": is_borderline,
-            "recommendation": "Manual Review Required (Borderline Risk)" if is_borderline else ("Automated Flag" if flagged else "Automated Clear")
-        }
-
-        # Cache & Audit Trail recording
-        timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        SEEN_TRANSACTIONS[txn_id] = {**res, "timestamp": timestamp_str}
-        
-        AUDIT_TRAIL.append({
-            "timestamp": timestamp_str,
-            "transaction_id": txn_id,
-            "amount": float(payload["amount"]),
-            "merchant_id": payload.get("merchant_id", 0),
-            "fraud_probability": round(prob, 4),
-            "flagged": flagged,
-            "threshold_used": round(float(threshold), 4),
-            "execution_mode": "ML Model (GradientBoosting)",
-            "status": res["recommendation"]
-        })
-
-        return jsonify(res)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 400
+    res = api_score_internal(payload)
+    return jsonify(res)
 
 
 @app.route("/api/threshold_eval")
 def api_threshold_eval():
-    """Evaluate performance metrics across multiple thresholds on test set."""
     test_df = get_test_split()
     y_test = test_df["label"].values
     probs = test_df["fraud_probability"].values
     avg_fraud_amt = test_df.loc[test_df["label"] == 1, "amount"].mean()
     fp_cost_unit = METRICS.get("false_positive_cost_assumption_usd", 4.0)
 
-    test_thresholds = [0.002, 0.005, 0.0102, 0.025, 0.05, 0.10, 0.20, 0.40]
+    test_thresholds = [0.002, 0.005, 0.016, 0.025, 0.05, 0.10, 0.20, 0.40]
     eval_results = []
 
     for t in test_thresholds:
@@ -204,33 +227,34 @@ def api_threshold_eval():
 
 @app.route("/api/audit_trail")
 def api_audit_trail():
-    """Return session audit trail log."""
-    return jsonify(list(reversed(AUDIT_TRAIL)))
+    """Return persistent decision audit trail from SQLite database."""
+    limit = int(request.args.get("limit", 200))
+    trail = db_get_audit_trail(limit=limit)
+    return jsonify(trail)
 
 
 @app.route("/api/failure_lab/fallback", methods=["POST"])
 def api_failure_fallback():
-    """Simulate model unavailability -> fallback to deterministic heuristic rule."""
     payload = request.get_json(force=True)
     amount = float(payload.get("amount", 6500.0))
     device_known = bool(payload.get("device_is_known", False))
     
-    # Fallback Rule Heuristic: Flag if amount > $5000 AND device is unknown
     rule_triggered = (amount > 5000.0) and (not device_known)
-    
+    decision = "FLAGGED" if rule_triggered else "CLEAR"
     timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     txn_id = f"FALLBACK_{int(time.time()*1000)}"
 
-    AUDIT_TRAIL.append({
+    db_insert_audit_event({
         "timestamp": timestamp_str,
         "transaction_id": txn_id,
         "amount": amount,
         "merchant_id": payload.get("merchant_id", 3),
         "fraud_probability": 0.9990 if rule_triggered else 0.0010,
-        "flagged": rule_triggered,
-        "threshold_used": 5000.0,
+        "threshold": 5000.0,
+        "decision": decision,
+        "policy_mode": "BALANCED",
         "execution_mode": "FALLBACK HEURISTIC (Rule: Amt>$5k & Device Unknown)",
-        "status": "Rule Flagged" if rule_triggered else "Rule Cleared"
+        "status_reason": f"Fallback rule decision: {decision}"
     })
 
     return jsonify({
@@ -247,7 +271,6 @@ def api_failure_fallback():
 
 @app.route("/api/failure_lab/duplicate", methods=["POST"])
 def api_failure_duplicate():
-    """Simulate submitting duplicate transaction ID."""
     txn_id = "TXN_DUP_DEMO_99"
     payload = {
         "transaction_id": txn_id,
@@ -259,23 +282,20 @@ def api_failure_duplicate():
         "force_new": True
     }
     
-    # First submission
     first_res = api_score_internal(payload)
-    
-    # Second submission (duplicate)
     payload["force_new"] = False
     dupe_res = api_score_internal(payload)
 
     return jsonify({
         "scenario": "DUPLICATE_TRANSACTION_ID",
         "first_submission": first_res,
-        "second_submission": dupe_res
+        "second_submission": dupe_res,
+        "idempotency_validated": bool(dupe_res.get("is_duplicate"))
     })
 
 
 @app.route("/api/failure_lab/borderline", methods=["POST"])
 def api_failure_borderline():
-    """Simulate scoring a borderline edge case transaction near threshold (0.0102)."""
     payload = {
         "amount": 185.00,
         "merchant_id": 2,
@@ -296,15 +316,21 @@ def api_failure_borderline():
 
 def api_score_internal(payload):
     txn_id = payload.get("transaction_id", f"DEMO_{int(time.time()*1000)}")
-    if txn_id in SEEN_TRANSACTIONS and not payload.get("force_new", False):
-        prev = SEEN_TRANSACTIONS[txn_id]
-        return {
-            "is_duplicate": True,
-            "transaction_id": txn_id,
-            "fraud_probability": prev["fraud_probability"],
-            "flagged": prev["flagged"],
-            "threshold_used": prev["threshold_used"]
-        }
+    
+    # SQLite idempotency lookup
+    if not payload.get("force_new", False):
+        prev = db_get_transaction(txn_id)
+        if prev:
+            return {
+                "is_duplicate": True,
+                "transaction_id": txn_id,
+                "first_seen": prev["timestamp"],
+                "fraud_probability": prev["fraud_probability"],
+                "flagged": bool(prev["decision"] in ["FLAGGED", "Automated Flag"]),
+                "decision": prev["decision"],
+                "threshold_used": prev["threshold"],
+                "note": "Idempotent duplicate response — retained original score result."
+            }
 
     row = pd.DataFrame([{
         "merchant_id": payload.get("merchant_id", 0),
@@ -327,24 +353,24 @@ def api_score_internal(payload):
         "transaction_id": txn_id,
         "fraud_probability": round(prob, 4),
         "flagged": flagged,
+        "decision": "FLAGGED" if flagged else "CLEAR",
         "threshold_used": round(float(threshold), 4)
     }
-    SEEN_TRANSACTIONS[txn_id] = {**res, "timestamp": timestamp_str}
     
-    AUDIT_TRAIL.append({
+    db_insert_audit_event({
         "timestamp": timestamp_str,
         "transaction_id": txn_id,
         "amount": float(payload["amount"]),
         "merchant_id": payload.get("merchant_id", 0),
         "fraud_probability": round(prob, 4),
-        "flagged": flagged,
-        "threshold_used": round(float(threshold), 4),
+        "threshold": round(float(threshold), 4),
+        "decision": "FLAGGED" if flagged else "CLEAR",
+        "policy_mode": "BALANCED",
         "execution_mode": "ML Model (GradientBoosting)",
-        "status": "Automated Flag" if flagged else "Automated Clear"
+        "status_reason": "Automated Flag" if flagged else "Automated Clear"
     })
     return res
 
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
-

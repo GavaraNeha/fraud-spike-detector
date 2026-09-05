@@ -1,3 +1,6 @@
 __pycache__/
 *.pyc
 .DS_Store
+data/audit_trail.db
+*.db
+*.full_bak
