@@ -25,15 +25,17 @@ from datetime import datetime
 from flask import Flask, jsonify, render_template, request
 from sklearn.metrics import precision_score, recall_score, f1_score, confusion_matrix
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(BASE_DIR, "model"))
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(BASE_DIR / "model"))
 from features import engineer_features
 
 app = Flask(__name__)
 
-MODEL_PATH = os.path.join(BASE_DIR, "model", "model.pkl")
-METRICS_PATH = os.path.join(BASE_DIR, "model", "metrics.json")
-DATA_PATH = os.path.join(BASE_DIR, "data", "transactions.csv")
+MODEL_PATH = str(BASE_DIR / "model" / "model.pkl")
+METRICS_PATH = str(BASE_DIR / "model" / "metrics.json")
+DATA_PATH = str(BASE_DIR / "data" / "transactions.csv")
 
 bundle = joblib.load(MODEL_PATH)
 model = bundle["model"]
@@ -72,6 +74,7 @@ def api_metrics():
 @app.route("/api/transactions")
 def api_transactions():
     limit = int(request.args.get("limit", 200))
+    offset = int(request.args.get("offset", 0))
     only_flagged = request.args.get("flagged", "false").lower() == "true"
     df = _scored_df.sort_values("timestamp", ascending=False)
     if only_flagged:
@@ -80,7 +83,10 @@ def api_transactions():
             "device_velocity_30min", "merchant_velocity_10min",
             "is_off_hours", "ip_country_match", "device_is_known", "amount_zscore",
             "fraud_probability", "flagged", "label"]
-    out = df[cols].head(limit)
+    if limit > 0:
+        out = df[cols].iloc[offset:offset+limit]
+    else:
+        out = df[cols].iloc[offset:]
     out["timestamp"] = out["timestamp"].astype(str)
     return jsonify(out.to_dict(orient="records"))
 
@@ -121,7 +127,7 @@ def api_score():
         flagged = bool(prob >= threshold)
         
         # Borderline check (within 0.008 of threshold)
-        is_borderline = abs(prob - threshold) <= 0.008
+        is_borderline = bool(abs(prob - threshold) <= 0.008)
 
         res = {
             "transaction_id": txn_id,

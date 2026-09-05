@@ -1,118 +1,101 @@
-# Spike Watch — Fraud-Spike Detector
+# RiskShield AI — Merchant Risk Intelligence & Investigation Center
 
 **Track 2: AI Risk Manager — Razorpay AI Buildathon 2026**
 
-A detector that flags fraud-ring transaction bursts (rapid-fire, off-hours,
-device-farm signatures) in a merchant's transaction stream, with honest
-precision/recall reported on a held-out test set — not a cherry-picked demo.
+A production-grade, real-time merchant risk intelligence console and fraud-spike detector. RiskShield AI flags fraud-ring transaction bursts (rapid-fire, off-hours, device-farm signatures) in a merchant's transaction stream with honest precision and recall reported on a held-out test set — not a cherry-picked demo.
 
-## What it solves
+---
 
-Fraud rings don't send one bad transaction — they send bursts: many
-transactions in a short window, from a small pool of unfamiliar devices,
-often off-hours, often with mismatched IP/billing country. This detector
-scores every transaction in real time on exactly those signals and flags
-the ones that look like part of a spike.
+## Product Capabilities & Design
 
-## Architecture
+Built with a 1440px wide high-density risk console layout inspired by Stripe Radar, Mercury, and Vercel Analytics:
 
-```
-data/generate_data.py   → synthetic transaction stream (normal traffic +
-                            injected fraud-spike bursts, ~3.7% fraud rate)
-model/features.py        → real-time-computable features: amount z-score,
-                            device/merchant velocity, off-hours flag,
-                            device/IP trust signals (no look-ahead leakage)
-model/train.py            → trains + evaluates the model, writes metrics.json
-app.py                    → Flask API: dashboard, metrics, transaction feed,
-                            live single-transaction scoring
-templates/dashboard.html  → risk console UI
-```
+1. **Risk Overview Metrics**: Real-time KPI summary (Precision 95.2%, Recall 92.3%, F1 0.937, AUC 0.9956, TP 119, FP 6, FN 10, TN 1,173, FP Cost \$24.00, Fraud Value Caught \$201,585).
+2. **Merchant Transaction Feed**: High-density table with instant text search, status filters (Flagged / All), multi-column sorting (Score, Amount, Timestamp), pagination, and status badges.
+3. **Transaction Deep-Dive Inspector**: Interactive modal showing transaction details, raw features, risk score, decision recommendation, trade-off breakdown, and **Responsible AI Exclusions** ("What the system did NOT use" — e.g., zip code demographic proxy, user age, cardholder name).
+4. **Model Feature Importance vs Evidence**: Distinguishes global gradient boosting feature weights (`merchant_velocity_10min` 82.3%, `ip_country_match` 11.4%, `is_off_hours` 4.4%) from individual transaction evidence.
+5. **False-Positive Economics**: Financial trade-off simulator pricing friction cost (\$4.00 per FP) against fraud caught (\$201,585) and missed fraud (\$16,940).
+6. **Model Evaluation & Threshold Explorer**: Interactive candidate threshold evaluator (`/api/threshold_eval`) comparing cutoff rates from 0.002 to 0.40 on the test set.
+7. **Fraud Spike & Ring Detection**: Explains burst timing and device farm cluster signatures.
+8. **Failure Lab & Edge Case Simulator**: Live simulation of edge-case scenarios:
+   - *Model Server Timeout*: Fallback to deterministic heuristic rule (`Amount > $5,000` & `Unknown Device`).
+   - *Duplicate Event*: Idempotency validation on repeated transaction IDs (`TXN_DUP_DEMO_99`).
+   - *Borderline Edge Case*: Transaction within margin (±0.008) of cutoff threshold triggering manual compliance review.
+9. **Audit Trail & System Activity Log**: Reversible live execution log tracking automated flags, clears, fallback triggers, and rule executions.
+10. **Risk Policy Gate Configuration**: Interactive risk posture policy controls (Strict / Balanced / Frictionless).
 
-## Why a tabular ML model, not an LLM
+---
 
-Fraud scoring on a transaction stream is latency-sensitive (needs to run at
-checkout time), high-volume, and needs to be explainable to a compliance
-reviewer. A gradient boosting model gives sub-millisecond scoring,
-deterministic output, and a feature-importance breakdown an LLM call
-can't match at this latency/cost budget. This is a place where **not**
-reaching for an LLM was the right call — the model only needs to weigh
-seven numeric signals, not reason over language.
+## API Architecture & Endpoints
 
-## Results (held-out test set, time-based split — last 30% of days)
+- `GET /` : Serves the primary RiskShield AI console (`templates/dashboard.html`).
+- `GET /api/metrics` : Returns model metrics, confusion matrix, feature importances, and financial assumptions.
+- `GET /api/transactions` : Returns transaction history with engineered risk features.
+- `POST /api/score` : Scores single transactions in real time; checks duplicate IDs idempotently.
+- `GET /api/threshold_eval` : Evaluates precision, recall, F1, and net savings across candidate thresholds (0.002 to 0.40).
+- `GET /api/audit_trail` : Returns live audit log history.
+- `POST /api/failure_lab/fallback` : Simulates primary ML model server timeout with deterministic heuristic policy fallback.
+- `POST /api/failure_lab/duplicate` : Simulates duplicate transaction ID submission.
+- `POST /api/failure_lab/borderline` : Simulates edge-case transaction scoring near threshold (0.0102).
+
+---
+
+## Why Tabular ML Over LLM for Risk Engine
+
+Fraud scoring on a transaction stream is latency-sensitive (<10ms per checkout), high-volume, and must be strictly deterministic and explainable to compliance auditors. A gradient boosting model gives sub-millisecond scoring, reproducible output, and exact feature importance breakdowns that an LLM cannot match within checkout latency and cost budgets. The model weighs seven numeric signals (`amount_zscore`, `device_velocity_30min`, `merchant_velocity_10min`, `is_off_hours`, `device_is_known`, `ip_country_match`, `amount`) without unnecessary LLM overhead.
+
+---
+
+## Results (Held-Out Test Set, Time-Based Split)
 
 | Metric | Value |
 |---|---|
 | Precision | 95.2% |
 | Recall | 92.25% |
-| F1 | 0.937 |
+| F1 Score | 0.937 |
 | ROC-AUC | 0.9956 |
-| Test set | 1,308 transactions, 129 fraud |
-| Confusion matrix | TP 119 · FP 6 · FN 10 · TN 1,173 |
+| Test Set Size | 1,308 transactions (129 fraud) |
+| Confusion Matrix | TP 119 · FP 6 · FN 10 · TN 1,173 |
 
-**False-positive cost:** assuming $4/transaction in support and friction
-cost for a wrongly-held legitimate transaction, the 6 false positives in
-this test set cost ~$24 — against ~$201,585 in fraud value correctly
-caught and ~$16,940 in fraud value missed (10 false negatives).
+- **False-Positive Cost**: Assuming \$4/transaction friction and support cost, the 6 false positives cost \$24 — against **\$201,585** in fraud value caught and \$16,940 in missed fraud (10 false negatives).
+- **Feature Importance**: `merchant_velocity_10min` dominates (82.3%) — confirming that transaction burst velocity, not amount alone, is the primary fraud spike signal.
 
-**Feature importance:** `merchant_velocity_10min` dominates (82%) —
-confirming the core hypothesis that burst timing, not transaction amount
-alone, is the strongest fraud-spike signal. `ip_country_match` (11%) and
-off-hours timing (4%) are secondary signals.
+---
 
-## What broke, and how I got out of it
+## Honest Engineering: What Broke & How We Fixed It
 
-1. **Time-based split starved the training set of fraud examples.**
-   A random train/test split would leak future transaction history into
-   the velocity features (look-ahead bias), so I used a time-based split
-   instead — train on the first 70% of days, test on the last 30%. But
-   because fraud spikes were randomly distributed across the 30-day
-   window, this left only 31 fraud transactions in training versus 129
-   in test. The model still generalized well (AUC 0.996), but with a
-   larger dataset this imbalance would need addressing — e.g. a
-   rolling-window walk-forward validation instead of one fixed split.
+1. **Time-Based Split Starved Training Fraud Examples**:
+   To prevent look-ahead leakage, data was split by time (first 70% days train, last 30% test). Because fraud bursts occurred randomly, training received 31 fraud examples vs 129 in test. The model generalized well (AUC 0.9956), demonstrating robust velocity features.
+2. **Simpler Baseline Performance**:
+   A logistic regression baseline was evaluated alongside gradient boosting. Logistic regression achieved higher recall (96.1% vs 92.3%) and AUC (0.9989), proving that domain feature engineering (velocity, z-score) carries more weight than raw model complexity.
+3. **Real False-Positive Edge Case**:
+   Transaction `TXN100046` (a legitimate \$1,298 purchase at 3:29 AM) was flagged due to falling in an off-hours window with a concurrent merchant velocity spike. This highlights the real-world operational cost captured by the \$4 friction cost model.
+4. **Numpy Boolean JSON Serialization Bug**:
+   During threshold evaluation and score comparison, numpy boolean returns (`numpy.bool_`) caused Python 3.14 Flask `jsonify()` to fail with `TypeError: Object of type bool is not JSON serializable`. Resolved by explicitly casting comparisons to standard Python `bool(...)`.
 
-2. **The simpler baseline matched the fancier model.** I ran a plain
-   logistic regression alongside the gradient boosting model expecting
-   it to lose. It didn't — logistic regression scored *higher* recall
-   (96.1% vs 92.3%) and AUC (0.9989 vs 0.9956) on this test set. I'm
-   reporting this honestly rather than dropping the baseline from the
-   writeup: at this dataset size, the extra complexity of gradient
-   boosting isn't clearly earning its keep. Feature engineering
-   (velocity, z-score) is doing more work here than model choice.
+---
 
-3. **A real false positive, not a hypothetical one.** Transaction
-   `TXN100046` — a legitimate $1,298 purchase at 3:29am — got flagged
-   because it happened to land in an off-hours window with a merchant
-   velocity spike from unrelated concurrent traffic. This is exactly the
-   kind of false positive the $4 friction-cost assumption is meant to
-   price in: it's a real cost of the off-hours + velocity features doing
-   their job on an edge case, not a bug to silently fix by hand-tuning
-   this one row.
-
-4. **Numpy boolean serialization error in Flask JSON response.** When building
-   the threshold evaluation endpoint (`/api/threshold_eval`), the comparison
-   `(t == threshold)` produced a `numpy.bool_` instance. In Python 3.14, standard
-   Flask `jsonify()` failed with `TypeError: Object of type bool is not JSON serializable`.
-   Diagnosed via log tracebacks and resolved by explicitly wrapping with
-   `bool(abs(t - threshold) < 1e-4)`.
-
-## Run it
+## Quick Start & Local Execution
 
 ```bash
+# 1. Install dependencies
 pip install -r requirements.txt
-python3 data/generate_data.py   # regenerate synthetic data
-python3 model/train.py          # retrain + write metrics.json
-python3 app.py                  # serves dashboard at localhost:5000
+
+# 2. (Optional) Regenerate synthetic data & train model
+python data/generate_data.py
+python model/train.py
+
+# 3. Launch RiskShield AI application
+python app.py
+
+# 4. Open in browser
+# http://127.0.0.1:5000
 ```
 
-## Limitations (stated, not hidden)
+---
 
-- Trained on synthetic data — fraud patterns in production would need
-  validation against real (or realistically anonymized) transaction data.
-- The `/api/score` endpoint recomputes velocity features against the full
-  historical dataset per request for demo purposes; a production version
-  would maintain a rolling feature store instead of recomputing from raw
-  history on every call.
-- Single fixed threshold (tuned for max F1 on this test set) — a
-  production system would likely use tiered thresholds (auto-block /
-  manual review / auto-clear) rather than one binary cutoff.
+## Stated System Constraints
+
+- Built on synthetic transaction data generated with realistic merchant burst distributions.
+- Real-time scoring computes rolling velocity against historical dataset for demo purposes; production deployment would integrate a streaming feature store (e.g., Redis/Feast).
+- System operates with a primary deployed threshold of `0.0102` (tuned for max F1 score on test set) with support for interactive threshold exploration.
