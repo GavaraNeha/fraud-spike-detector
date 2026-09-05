@@ -60,9 +60,11 @@ POLICY_THRESHOLDS = bundle.get("policy_thresholds", {
 with open(METRICS_PATH) as f:
     METRICS = json.load(f)
 
-# Load and engineer raw transaction dataset
-_raw = pd.read_csv(DATA_PATH, parse_dates=["timestamp"])
-_scored_df, _ = engineer_features(_raw)
+TRAIN_CUTOFF = METRICS.get("train_cutoff") or METRICS.get("split_metadata", {}).get("train", {}).get("end") or bundle.get("train_cutoff")
+
+# Load and engineer raw transaction dataset (strictly chronological timestamp order)
+_raw = pd.read_csv(DATA_PATH, parse_dates=["timestamp"]).sort_values("timestamp").reset_index(drop=True)
+_scored_df, _ = engineer_features(_raw, train_cutoff=TRAIN_CUTOFF)
 
 # --- Global Application State ---
 ACTIVE_POLICY_MODE = "BALANCED"
@@ -233,17 +235,19 @@ def score_transaction_internal(payload, source="MANUAL"):
 
     # 3. Standard ML Scoring
     curr_thresh = get_active_threshold()
+    amt_val = float(payload.get("amount", 0.0))
+
     row = pd.DataFrame([{
         "merchant_id": payload.get("merchant_id", 0),
         "timestamp": payload.get("timestamp", pd.Timestamp.now()),
-        "amount": float(payload["amount"]),
+        "amount": amt_val,
         "device_id": payload.get("device_id", -1),
         "device_is_known": bool(payload.get("device_is_known", True)),
         "ip_country_match": bool(payload.get("ip_country_match", True)),
         "label": 0,
     }])
     combined = pd.concat([_raw, row], ignore_index=True)
-    feats, _ = engineer_features(combined)
+    feats, _ = engineer_features(combined, train_cutoff=TRAIN_CUTOFF)
     last_row = feats.iloc[[-1]]
     feats_input = last_row[feature_cols]
 
@@ -283,7 +287,7 @@ def score_transaction_internal(payload, source="MANUAL"):
         "is_duplicate": False,
         "transaction_id": txn_id,
         "merchant_id": payload.get("merchant_id", 0),
-        "amount": float(payload["amount"]),
+        "amount": amt_val,
         "fraud_probability": round(prob, 4),
         "flagged": flagged,
         "decision": decision,
@@ -300,7 +304,7 @@ def score_transaction_internal(payload, source="MANUAL"):
         "timestamp": timestamp_str,
         "transaction_id": txn_id,
         "merchant_id": payload.get("merchant_id", 0),
-        "amount": float(payload["amount"]),
+        "amount": amt_val,
         "fraud_probability": round(prob, 4),
         "threshold": round(curr_thresh, 4),
         "decision": decision,
@@ -333,7 +337,7 @@ def api_metrics():
 def api_policy():
     global ACTIVE_POLICY_MODE
     if request.method == "POST":
-        payload = request.get_json(force=True)
+        payload = request.get_json(silent=True) or {}
         mode = payload.get("mode", "BALANCED").upper()
         if mode in POLICY_THRESHOLDS:
             ACTIVE_POLICY_MODE = mode
@@ -354,7 +358,6 @@ def api_policy():
 
 @app.route("/api/system_health")
 def api_system_health():
-    # Validate SQLite connection
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
@@ -400,7 +403,15 @@ def api_transactions():
 
 @app.route("/api/score", methods=["POST"])
 def api_score():
-    payload = request.get_json(force=True)
+    payload = request.get_json(silent=True) or {}
+    amt_val = payload.get("amount")
+    if amt_val is None:
+        return jsonify({"error": "Missing required parameter 'amount' in request body."}), 400
+    try:
+        float(amt_val)
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid parameter 'amount'. Must be a numeric value."}), 400
+
     res = score_transaction_internal(payload, source="MANUAL_API")
     return jsonify(res)
 
@@ -408,7 +419,6 @@ def api_score():
 @app.route("/api/live_stream/next", methods=["POST"])
 def api_live_stream_next():
     """Generates and scores a synthetic live stream transaction."""
-    # 20% chance of an M9 burst transaction scenario, 80% normal traffic
     is_m9_burst = (random.random() < 0.20)
     now_ts = datetime.now()
 
@@ -595,10 +605,8 @@ def api_failure_duplicate():
         "ip_country_match": False,
         "force_new": True
     }
-    # First submission
     first_res = score_transaction_internal(payload, source="FAILURE_LAB")
 
-    # Second submission (duplicate without force_new)
     payload["force_new"] = False
     dupe_res = score_transaction_internal(payload, source="FAILURE_LAB")
 
@@ -613,7 +621,6 @@ def api_failure_duplicate():
 @app.route("/api/failure_lab/borderline", methods=["POST"])
 def api_failure_borderline():
     curr_thresh = get_active_threshold()
-    # Produce a score very close to active threshold
     payload = {
         "amount": 185.00,
         "merchant_id": 2,
@@ -633,4 +640,4 @@ def api_failure_borderline():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)
