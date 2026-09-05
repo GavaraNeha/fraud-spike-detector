@@ -8,7 +8,46 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 <style>
-  :root {
+  :root, [data-theme="light"] {
+    --ink: #F7F8FA;
+    --ink-surface: #FFFFFF;
+    --panel: #FFFFFF;
+    --panel-raised: #F8FAFC;
+    --hairline: rgba(0, 0, 0, 0.08);
+    --hairline-hover: #D1D5DB;
+    --text: #1A1D24;
+    --text-dim: #5B6472;
+    --text-muted: #6B7280;
+    --safe: #1B8A5A;
+    --safe-bg: rgba(27, 138, 90, 0.1);
+    --caution: #B7791F;
+    --caution-bg: rgba(183, 121, 31, 0.1);
+    --alert: #C82C2C;
+    --alert-bg: rgba(200, 44, 44, 0.1);
+    --accent-blue: #0284C7;
+    --accent-teal: #0D9488;
+    --electric-cyan: #0284C7;
+    --cyan-glow: rgba(2, 132, 199, 0.25);
+    --grid-line: rgba(0, 0, 0, 0.03);
+    --nav-bg: rgba(255, 255, 255, 0.92);
+    --nav-hover: rgba(0, 0, 0, 0.04);
+    --nav-active-bg: rgba(2, 132, 199, 0.08);
+    --brand-svg-fill: #FFFFFF;
+    --table-hdr-bg: #F8FAFC;
+    --table-row-even: rgba(0, 0, 0, 0.015);
+    --table-row-hover: rgba(2, 132, 199, 0.04);
+    --action-btn-bg: var(--electric-cyan);
+    --action-btn-color: #FFFFFF;
+    --action-btn-hover: #0369A1;
+    --lab-out-bg: #F8FAFC;
+    --modal-bg: #FFFFFF;
+    --modal-overlay: rgba(0, 0, 0, 0.4);
+    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  [data-theme="dark"] {
     --ink: #0B0F19;
     --ink-surface: #111827;
     --panel: #111827;
@@ -28,8 +67,21 @@
     --accent-teal: #14B8A6;
     --electric-cyan: #00D4FF;
     --cyan-glow: rgba(0, 212, 255, 0.4);
-    --mono: 'IBM Plex Mono', monospace;
-    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --grid-line: rgba(255, 255, 255, 0.04);
+    --nav-bg: rgba(11, 15, 25, 0.85);
+    --nav-hover: rgba(255, 255, 255, 0.06);
+    --nav-active-bg: rgba(0, 212, 255, 0.08);
+    --brand-svg-fill: #0B0F19;
+    --table-hdr-bg: #0D1320;
+    --table-row-even: transparent;
+    --table-row-hover: rgba(255, 255, 255, 0.03);
+    --action-btn-bg: #00D4FF;
+    --action-btn-color: #0B0F19;
+    --action-btn-hover: #33DDFF;
+    --lab-out-bg: #080C14;
+    --modal-bg: #111827;
+    --modal-overlay: rgba(0, 0, 0, 0.75);
+    --card-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
   }
 
   * { box-sizing: border-box; }
@@ -43,8 +95,8 @@
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     position: relative;
+    transition: background 0.2s ease, color 0.2s ease;
   }
-  /* Ambient Background Grid Texture */
   body::before {
     content: '';
     position: fixed;
@@ -52,57 +104,39 @@
     z-index: -1;
     pointer-events: none;
     background-image: 
-      linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
     background-size: 64px 64px;
+    transition: background-image 0.2s ease;
   }
 
   a { color: inherit; text-decoration: none; }
 
-  /* Staggered Card Entrance Animation */
+  nav.top-nav, .ov-card, .panel, .spike-panel, .lab-card, .policy-card,
+  table.txn-table th, table.txn-table td, table.audit-table th, table.audit-table td,
+  .brand-tag, .filter-btn, .thresh-item, .ev-card, .status-banner, .provenance-box,
+  .p-step, .econ-card, .cm-cell, .field input, button.action-btn, .lab-out, .modal-card, .theme-toggle-btn {
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
   @keyframes fadeUpEntrance {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   .ov-card, .panel, .spike-panel, .lab-card, .policy-card {
     animation: fadeUpEntrance 0.45s ease-out backwards;
   }
 
-  .ov-card:nth-child(1) { animation-delay: 0.04s; }
-  .ov-card:nth-child(2) { animation-delay: 0.10s; }
-  .ov-card:nth-child(3) { animation-delay: 0.16s; }
-  .ov-card:nth-child(4) { animation-delay: 0.22s; }
-  .ov-card:nth-child(5) { animation-delay: 0.28s; }
-  .ov-card:nth-child(6) { animation-delay: 0.34s; }
-  .ov-card:nth-child(7) { animation-delay: 0.40s; }
-
-  .policy-card:nth-child(1) { animation-delay: 0.05s; }
-  .policy-card:nth-child(2) { animation-delay: 0.12s; }
-  .policy-card:nth-child(3) { animation-delay: 0.19s; }
-  .policy-card:nth-child(4) { animation-delay: 0.26s; }
-  .policy-card:nth-child(5) { animation-delay: 0.33s; }
-  .policy-card:nth-child(6) { animation-delay: 0.40s; }
-
-  .lab-card:nth-child(1) { animation-delay: 0.06s; }
-  .lab-card:nth-child(2) { animation-delay: 0.14s; }
-  .lab-card:nth-child(3) { animation-delay: 0.22s; }
-
   /* Navigation Bar */
   nav.top-nav {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(11, 15, 25, 0.85);
+    background: var(--nav-bg);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--hairline);
     padding: 10px 32px;
   }
   .nav-inner {
@@ -120,7 +154,7 @@
     display: flex; align-items: center; justify-content: center;
     box-shadow: 0 0 10px var(--cyan-glow);
   }
-  .brand-logo svg { fill: #0B0F19; width: 16px; height: 16px; }
+  .brand-logo svg { fill: var(--brand-svg-fill); width: 16px; height: 16px; transition: fill 0.2s ease; }
   .brand-name { font-weight: 700; font-size: 16px; color: var(--text); }
   .brand-tag {
     font-size: 11px;
@@ -150,13 +184,34 @@
   }
   .nav-links a:hover {
     color: var(--text);
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--nav-hover);
   }
   .nav-links a.active {
     color: var(--electric-cyan);
-    background: rgba(0, 212, 255, 0.08);
+    background: var(--nav-active-bg);
     border-bottom: 2px solid var(--electric-cyan);
     font-weight: 600;
+  }
+
+  .theme-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--panel-raised);
+    border: 1px solid var(--hairline);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .theme-toggle-btn:hover {
+    color: var(--text);
+    border-color: var(--electric-cyan);
+    background: var(--nav-hover);
   }
 
   .pulse {
@@ -167,7 +222,7 @@
     font-size: 11.5px;
     color: var(--safe);
     background: var(--safe-bg);
-    border: 1px solid rgba(16, 185, 129, 0.2);
+    border: 1px solid var(--safe-bg);
     padding: 4px 10px;
     border-radius: 4px;
   }
@@ -204,8 +259,8 @@
     font-family: var(--mono);
     font-weight: 700;
     color: var(--electric-cyan);
-    background: rgba(0, 212, 255, 0.12);
-    border: 1px solid rgba(0, 212, 255, 0.3);
+    background: var(--nav-active-bg);
+    border: 1px solid var(--cyan-glow);
     padding: 2px 6px;
     border-radius: 4px;
     text-transform: uppercase;
@@ -214,49 +269,287 @@
     vertical-align: middle;
   }
 
-  /* Status Banner */
-  .status-banner {
-    background: rgba(0, 212, 255, 0.06);
-    border: 1px solid rgba(0, 212, 255, 0.22);
-    border-left: 4px solid var(--electric-cyan);
-    border-radius: 8px;
-    padding: 12px 18px;
-    font-size: 13.5px;
-    color: var(--text);
-    margin-bottom: 24px;
+  /* Workflow Lifecycle Breadcrumb Bar */
+  .workflow-breadcrumb {
     display: flex;
     align-items: center;
-    gap: 12px;
-    box-shadow: 0 4px 16px rgba(0, 212, 255, 0.08);
+    gap: 8px;
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    padding: 8px 16px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    white-space: nowrap;
+    box-shadow: var(--card-shadow);
   }
-  .status-banner-badge {
-    background: rgba(0, 212, 255, 0.15);
-    color: var(--electric-cyan);
-    border: 1px solid rgba(0, 212, 255, 0.4);
+  .wf-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-family: var(--mono);
-    font-size: 10.5px;
-    font-weight: 700;
-    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    padding: 4px 8px;
     border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .wf-step:hover { color: var(--text); background: var(--nav-hover); }
+  .wf-step.active {
+    color: var(--electric-cyan);
+    background: var(--nav-active-bg);
+    border: 1px solid var(--cyan-glow);
+  }
+  .wf-num {
+    background: var(--panel-raised);
+    border: 1px solid var(--hairline);
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    font-size: 10px;
+  }
+  .wf-step.active .wf-num {
+    background: var(--electric-cyan);
+    color: #FFFFFF;
+    border-color: var(--electric-cyan);
+  }
+  .wf-arrow { color: var(--text-muted); font-size: 11px; }
+
+  /* Risk Command Center Header */
+  .command-center-header {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-left: 5px solid var(--electric-cyan);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--card-shadow);
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .cmd-hdr-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .cmd-title-wrap { display: flex; flex-direction: column; gap: 4px; }
+  .cmd-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--electric-cyan);
     text-transform: uppercase;
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    white-space: nowrap;
   }
-  .cyan-pulse-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
+  .cmd-title {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .cmd-status-badge {
+    background: var(--nav-active-bg);
+    border: 1px solid var(--cyan-glow);
+    color: var(--safe);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cmd-hdr-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid var(--hairline);
+  }
+  @media (max-width: 900px) { .cmd-hdr-stats { grid-template-columns: repeat(2, 1fr); } }
+  .cmd-stat-item {
+    background: var(--panel-raised);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 10px 14px;
+  }
+  .cmd-stat-item.highlight-flag { border-left: 3px solid var(--electric-cyan); }
+  .cmd-stat-item.highlight-alert { border-left: 3px solid var(--alert); }
+  .cmd-stat-item.highlight-safe { border-left: 3px solid var(--safe); }
+  .cmd-stat-lbl { font-size: 10.5px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); }
+  .cmd-stat-val { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--text); margin-top: 2px; }
+  .cmd-stat-sub { font-size: 11px; font-weight: 500; color: var(--text-dim); font-family: var(--sans); }
+
+  /* System Health Status Badges */
+  .badge-status { font-family: var(--mono); font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
+  .badge-status.safe { background: var(--safe-bg); color: var(--safe); border: 1px solid var(--safe-bg); }
+  .badge-status.alert { background: var(--alert-bg); color: var(--alert); border: 1px solid var(--alert-bg); }
+
+  /* Priority Risk Queue Component */
+  .priority-queue-panel {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 24px;
+  }
+  .pq-list { display: flex; flex-direction: column; gap: 10px; }
+  .pq-card {
+    background: var(--panel-raised);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    cursor: pointer;
+  }
+  .pq-card:hover {
+    border-color: var(--electric-cyan);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  }
+  .pq-card.active-selected {
+    border-color: var(--electric-cyan);
+    background: var(--nav-active-bg);
+  }
+  .pq-left { display: flex; align-items: center; gap: 12px; }
+  .pq-tier-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+  .pq-tier-badge.critical { background: var(--alert-bg); color: var(--alert); border: 1px solid var(--alert-bg); }
+  .pq-tier-badge.high { background: var(--caution-bg); color: var(--caution); border: 1px solid var(--caution-bg); }
+  .pq-tier-badge.review { background: var(--nav-active-bg); color: var(--electric-cyan); border: 1px solid var(--cyan-glow); }
+  
+  .pq-merch { font-weight: 700; font-size: 13.5px; color: var(--text); }
+  .pq-meta { font-family: var(--mono); font-size: 11.5px; color: var(--text-dim); }
+  .pq-right { display: flex; align-items: center; gap: 16px; text-align: right; }
+  .pq-score { font-family: var(--mono); font-size: 16px; font-weight: 700; color: var(--alert); }
+  .pq-amt { font-family: var(--mono); font-size: 13.5px; font-weight: 600; color: var(--text); }
+  .pq-signal { font-size: 11.5px; color: var(--text-dim); }
+  .pq-btn {
     background: var(--electric-cyan);
-    box-shadow: 0 0 8px var(--electric-cyan);
-    animation: cyanPulse 1.8s infinite ease-in-out;
+    color: var(--brand-svg-fill);
+    font-weight: 700;
+    font-size: 11px;
+    font-family: var(--mono);
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity 0.15s ease;
   }
-  @keyframes cyanPulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.3; transform: scale(1.3); }
+  .pq-btn:hover { opacity: 0.85; }
+
+  /* AI Risk Explanation Panel */
+  .ai-explanation-card {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 24px;
+  }
+  .ai-score-banner {
+    background: var(--panel-raised);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .ai-score-num { font-family: var(--mono); font-size: 28px; font-weight: 800; color: var(--alert); line-height: 1; }
+  .ai-signal-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 16px; }
+  .ai-signal-table th { text-align: left; font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid var(--hairline); }
+  .ai-signal-table td { padding: 8px; border-bottom: 1px solid var(--hairline); font-family: var(--mono); color: var(--text); }
+
+  .ai-pipeline-flow {
+    background: var(--panel-raised);
+    border: 1px solid var(--hairline);
+    border-radius: 6px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 11px;
+    font-family: var(--mono);
+  }
+  .pipeline-node {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    padding: 6px 10px;
+    border-radius: 4px;
+    text-align: center;
+    flex: 1;
+  }
+  .pipeline-node .p-lbl { font-size: 9px; color: var(--text-dim); text-transform: uppercase; }
+  .pipeline-node .p-val { font-weight: 700; margin-top: 2px; color: var(--text); }
+  .pipeline-arrow { color: var(--electric-cyan); font-weight: 700; }
+
+  /* 3-Column Summary Cards Grid */
+  .summary-3col-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-top: 24px;
+    margin-bottom: 32px;
+  }
+  @media (max-width: 900px) { .summary-3col-grid { grid-template-columns: 1fr; } }
+  .summary-card {
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: var(--card-shadow);
+  }
+  .summary-card-title { font-size: 13.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .summary-card-sub { font-size: 11.5px; color: var(--text-dim); margin-bottom: 14px; }
+  .summary-row-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .summary-stat-row { display: flex; justify-content: space-between; font-size: 12px; font-family: var(--mono); padding: 4px 0; border-bottom: 1px dashed var(--hairline); }
+  .summary-link-btn {
+    background: var(--panel-raised);
+    border: 1px solid var(--hairline);
+    color: var(--electric-cyan);
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 8px 12px;
+    border-radius: 6px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: block;
+    text-decoration: none;
+  }
+  .summary-link-btn:hover {
+    border-color: var(--electric-cyan);
+    background: var(--nav-active-bg);
   }
 
-  /* Section 1: Overview Grid */
+  /* Overview Grid */
   .overview-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -272,7 +565,7 @@
     border-radius: 8px;
     padding: 14px 16px;
     position: relative;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    box-shadow: var(--card-shadow);
   }
   .ov-card.caught { border-left: 4px solid var(--safe); }
   .ov-card.recall { border-left: 4px solid var(--safe); }
@@ -290,10 +583,10 @@
     flex-shrink: 0;
   }
   .ov-icon-chip svg { width: 14px; height: 14px; }
-  .ov-icon-chip.green { background: rgba(16, 185, 129, 0.15); color: var(--safe); }
-  .ov-icon-chip.amber { background: rgba(245, 158, 11, 0.15); color: var(--caution); }
-  .ov-icon-chip.cyan { background: rgba(0, 212, 255, 0.15); color: var(--electric-cyan); }
-  .ov-icon-chip.red { background: rgba(239, 68, 68, 0.15); color: var(--alert); }
+  .ov-icon-chip.green { background: var(--safe-bg); color: var(--safe); }
+  .ov-icon-chip.amber { background: var(--caution-bg); color: var(--caution); }
+  .ov-icon-chip.cyan { background: var(--nav-active-bg); color: var(--electric-cyan); }
+  .ov-icon-chip.red { background: var(--alert-bg); color: var(--alert); }
 
   .ov-card .lbl { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); }
   .ov-card .val { font-family: var(--mono); font-size: 24px; font-weight: 600; letter-spacing: -0.03em; margin-top: 6px; color: var(--text); }
@@ -314,12 +607,12 @@
     border: 1px solid var(--hairline);
     border-radius: 8px;
     padding: 20px;
+    box-shadow: var(--card-shadow);
   }
   .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  .panel h2 { font-size: 15px; font-weight: 600; margin: 0; }
+  .panel h2 { font-size: 15px; font-weight: 600; margin: 0; color: var(--text); }
   .panel .sub { color: var(--text-dim); font-size: 12px; margin: 2px 0 0; }
 
-  /* Table Controls */
   .table-controls {
     display: flex;
     gap: 10px;
@@ -347,9 +640,8 @@
     border-radius: 6px;
     cursor: pointer;
   }
-  .filter-btn.active { color: var(--electric-cyan); border-color: var(--electric-cyan); background: rgba(0, 212, 255, 0.12); font-weight: 600; }
+  .filter-btn.active { color: var(--electric-cyan); border-color: var(--electric-cyan); background: var(--nav-active-bg); font-weight: 600; }
 
-  /* Section 2: Transactions Table */
   table.txn-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
   table.txn-table th {
     text-align: left;
@@ -359,18 +651,19 @@
     text-transform: uppercase;
     padding: 10px 12px;
     border-bottom: 1px solid var(--hairline);
-    background: #0D1320;
+    background: var(--table-hdr-bg);
   }
   table.txn-table td {
     padding: 10px 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid var(--hairline);
     font-family: var(--mono);
     font-weight: 500;
     letter-spacing: -0.01em;
     color: var(--text);
   }
   table.txn-table tr { cursor: pointer; transition: background 0.12s ease; }
-  table.txn-table tr:hover { background: rgba(255, 255, 255, 0.03); }
+  table.txn-table tr:nth-child(even) { background: var(--table-row-even); }
+  table.txn-table tr:hover { background: var(--table-row-hover); }
 
   .badge {
     padding: 2px 8px;
@@ -380,49 +673,21 @@
     font-weight: 600;
     display: inline-block;
   }
-  .badge.flagged { background: var(--alert-bg); color: var(--alert); border: 1px solid rgba(239, 68, 68, 0.3); }
-  .badge.clear { background: var(--safe-bg); color: var(--safe); border: 1px solid rgba(16, 185, 129, 0.3); }
-  .badge.review { background: var(--caution-bg); color: var(--caution); border: 1px solid rgba(245, 158, 11, 0.3); }
+  .badge.flagged { background: var(--alert-bg); color: var(--alert); border: 1px solid var(--alert-bg); }
+  .badge.clear { background: var(--safe-bg); color: var(--safe); border: 1px solid var(--safe-bg); }
 
-  /* Section 3: Live Scoring Instrument */
-  .gauge-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 14px 0;
-    position: relative;
-  }
-  .gauge-svg { width: 190px; height: 100px; }
-  .gauge-bg { fill: none; stroke: var(--panel-raised); stroke-width: 16; stroke-linecap: round; }
+  .gauge-container { text-align: center; margin: 10px 0 20px; position: relative; }
+  .gauge-svg { width: 180px; height: 100px; }
+  .gauge-bg { fill: none; stroke: var(--panel-raised); stroke-width: 10; stroke-linecap: round; }
   .gauge-fill {
-    fill: none;
-    stroke: var(--safe);
-    stroke-width: 16;
-    stroke-linecap: round;
-    stroke-dasharray: 220;
-    stroke-dashoffset: 220;
-    transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease, filter 0.3s ease;
-    filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.6));
+    fill: none; stroke: var(--safe); stroke-width: 10; stroke-linecap: round;
+    stroke-dasharray: 110; stroke-dashoffset: 110;
+    transition: stroke-dashoffset 0.8s ease, stroke 0.4s ease;
   }
-  .gauge-text { position: absolute; top: 44px; text-align: center; }
-  .gauge-score { font-family: var(--mono); font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
-  .gauge-status { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-top: 2px; }
+  .gauge-text { position: absolute; bottom: 10px; left: 0; right: 0; }
+  .gauge-score { font-family: var(--mono); font-size: 26px; font-weight: 700; color: var(--text); }
+  .gauge-status { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); margin-top: -2px; }
 
-  /* Section 4: Provenance Chain */
-  .provenance-box {
-    background: var(--panel-raised);
-    border: 1px solid var(--hairline);
-    border-radius: 6px;
-    padding: 12px;
-    margin-top: 14px;
-  }
-  .provenance-title { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
-  .provenance-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
-  .p-step { background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; border: 1px solid var(--hairline); }
-  .p-step .st-lbl { font-size: 9.5px; color: var(--text-muted); text-transform: uppercase; }
-  .p-step .st-val { font-family: var(--mono); font-size: 13.5px; font-weight: 600; letter-spacing: -0.01em; margin-top: 2px; }
-
-  /* Form Controls */
   .field { margin-bottom: 12px; }
   .field label { display: block; font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; margin-bottom: 4px; }
   .field input {
@@ -435,7 +700,6 @@
     font-family: var(--mono);
     font-size: 12.5px;
     font-weight: 500;
-    letter-spacing: -0.01em;
   }
   .field input:focus { outline: none; border-color: var(--electric-cyan); }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -443,8 +707,8 @@
 
   button.action-btn {
     width: 100%;
-    background: var(--electric-cyan);
-    color: #0B0F19;
+    background: var(--action-btn-bg);
+    color: var(--action-btn-color);
     border: none;
     border-radius: 6px;
     padding: 10px;
@@ -452,38 +716,32 @@
     font-weight: 700;
     font-size: 13.5px;
     cursor: pointer;
-    transition: all 0.18s ease;
-    box-shadow: 0 0 14px rgba(0, 212, 255, 0.35);
+    box-shadow: 0 2px 8px var(--cyan-glow);
   }
-  button.action-btn:hover {
-    background: #33DDFF;
-    box-shadow: 0 0 22px rgba(0, 212, 255, 0.6);
-  }
+  button.action-btn:hover { background: var(--action-btn-hover); }
 
-  /* Section 5: False-Positive Economics */
-  .fp-grid {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap: 20px;
-  }
-  @media (max-width: 860px) { .fp-grid { grid-template-columns: 1fr; } }
-
-  .cm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-  .cm-box {
+  .provenance-box {
+    margin-top: 16px;
     background: var(--panel-raised);
     border: 1px solid var(--hairline);
     border-radius: 6px;
     padding: 12px;
+  }
+  .provenance-title { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+  .provenance-steps { display: flex; gap: 6px; }
+  .p-step {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    padding: 6px 8px;
     text-align: center;
   }
-  .cm-box.tp { border-color: rgba(16, 185, 129, 0.4); }
-  .cm-box.tp .num { color: var(--safe); }
-  .cm-box.fp { border-color: rgba(245, 158, 11, 0.4); }
-  .cm-box.fp .num { color: var(--caution); }
-  .cm-box.fn { border-color: rgba(239, 68, 68, 0.4); }
-  .cm-box.fn .num { color: var(--alert); }
-  .cm-box .num { font-family: var(--mono); font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
-  .cm-box .txt { font-size: 11px; color: var(--text-dim); }
+  .p-step .st-lbl { font-size: 9px; color: var(--text-dim); text-transform: uppercase; }
+  .p-step .st-val { font-family: var(--mono); font-size: 11.5px; font-weight: 700; margin-top: 2px; color: var(--text); }
+
+  .fp-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
+  @media (max-width: 860px) { .fp-grid { grid-template-columns: 1fr; } }
 
   .econ-card {
     background: var(--panel-raised);
@@ -491,10 +749,9 @@
     border-radius: 6px;
     padding: 16px;
   }
-  .econ-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; }
+  .econ-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; color: var(--text); }
   .econ-row.total { border-top: 1px solid var(--hairline); padding-top: 8px; font-weight: 700; }
 
-  /* Section 6: Model Evaluation & Threshold Explorer */
   .thresh-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; }
   .thresh-item {
     background: var(--panel-raised);
@@ -503,13 +760,12 @@
     font-family: var(--mono);
     font-size: 12.5px;
     font-weight: 600;
-    letter-spacing: -0.01em;
     padding: 6px 12px;
     border-radius: 6px;
     cursor: pointer;
     white-space: nowrap;
   }
-  .thresh-item.active { color: var(--text); border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.15); }
+  .thresh-item.active { color: var(--text); border-color: var(--accent-blue); background: var(--nav-active-bg); }
 
   .eval-metrics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   @media (max-width: 768px) { .eval-metrics-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -518,17 +774,16 @@
   .ev-card .elbl { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; font-weight: 600; }
   .ev-card .eval { font-family: var(--mono); font-size: 20px; font-weight: 600; letter-spacing: -0.02em; margin-top: 4px; color: var(--text); }
 
-  /* Section 7: Fraud Spike Detection */
   .spike-panel {
     background: var(--panel);
     border: 1px solid var(--hairline);
     border-radius: 8px;
     padding: 20px;
+    box-shadow: var(--card-shadow);
   }
-  .spike-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; }
+  .spike-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 12px; color: var(--text); }
   @media (max-width: 768px) { .spike-stats { grid-template-columns: repeat(2, 1fr); } }
 
-  /* Section 8: Failure Lab */
   .lab-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
   @media (max-width: 860px) { .lab-grid { grid-template-columns: 1fr; } }
   .lab-card {
@@ -537,8 +792,9 @@
     border-radius: 8px;
     padding: 16px;
     display: flex; flex-direction: column; justify-content: space-between;
+    box-shadow: var(--card-shadow);
   }
-  .lab-card h4 { margin: 0 0 4px; font-size: 13.5px; }
+  .lab-card h4 { margin: 0 0 4px; font-size: 13.5px; color: var(--text); }
   .lab-card p { font-size: 12px; color: var(--text-dim); margin: 0 0 14px; min-height: 48px; }
   .lab-btn {
     background: var(--panel-raised);
@@ -554,23 +810,21 @@
 
   .lab-out {
     margin-top: 14px;
-    background: #080C14;
+    background: var(--lab-out-bg);
     border: 1px solid var(--hairline);
     border-radius: 6px;
     padding: 14px;
     font-family: var(--mono);
     font-size: 12px;
     font-weight: 500;
-    letter-spacing: -0.01em;
     color: var(--accent-teal);
     display: none;
   }
 
-  /* Modal Dialog for Transaction Detail (Section 3 & 4) */
   .modal-overlay {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.75);
+    background: var(--modal-overlay);
     z-index: 200;
     display: none;
     align-items: center;
@@ -580,8 +834,9 @@
   .modal-overlay.open { display: flex; }
 
   .modal-card {
-    background: #111827;
+    background: var(--modal-bg);
     border: 1px solid var(--hairline-hover);
+    box-shadow: var(--card-shadow);
     border-radius: 12px;
     max-width: 680px;
     width: 100%;
@@ -589,6 +844,7 @@
     position: relative;
     max-height: 90vh;
     overflow-y: auto;
+    color: var(--text);
   }
   .modal-close {
     position: absolute;
@@ -603,13 +859,13 @@
   }
 
   .feat-row { margin-bottom: 10px; }
-  .feat-head { display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 3px; }
+  .feat-head { display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 3px; color: var(--text); }
   .feat-bar-bg { height: 6px; background: var(--panel-raised); border-radius: 3px; overflow: hidden; }
   .feat-bar-fill { height: 100%; background: var(--accent-blue); border-radius: 3px; }
 
   .responsible-ai-box {
-    background: rgba(59, 130, 246, 0.06);
-    border: 1px solid rgba(59, 130, 246, 0.2);
+    background: var(--nav-active-bg);
+    border: 1px solid var(--cyan-glow);
     border-radius: 6px;
     padding: 12px;
     margin-top: 14px;
@@ -617,19 +873,17 @@
     color: var(--text-dim);
   }
 
-  /* Section 9: Audit Trail Table */
   table.audit-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
-  table.audit-table th { text-align: left; color: var(--text-dim); font-size: 10.5px; text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid var(--hairline); background: #0D1320; }
-  table.audit-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); font-family: var(--mono); font-weight: 500; letter-spacing: -0.01em; }
+  table.audit-table th { text-align: left; color: var(--text-dim); font-size: 10.5px; text-transform: uppercase; padding: 8px 10px; border-bottom: 1px solid var(--hairline); background: var(--table-hdr-bg); }
+  table.audit-table td { padding: 8px 10px; border-bottom: 1px solid var(--hairline); font-family: var(--mono); font-weight: 500; color: var(--text); }
+  table.audit-table tr:nth-child(even) { background: var(--table-row-even); }
 
-  /* Section 10: Policy Config */
   .policy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
   @media (max-width: 768px) { .policy-grid { grid-template-columns: 1fr; } }
   .policy-card { background: var(--panel-raised); border: 1px solid var(--hairline); padding: 14px; border-radius: 6px; }
   .policy-card .plbl { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; font-weight: 600; }
-  .policy-card .pval { font-family: var(--mono); font-size: 14px; font-weight: 600; letter-spacing: -0.01em; margin-top: 4px; color: var(--text); }
+  .policy-card .pval { font-family: var(--mono); font-size: 14px; font-weight: 600; margin-top: 4px; color: var(--text); }
 
-  /* 2x2 Confusion Matrix Heatmap Grid */
   .cm-heatmap-wrap {
     display: grid;
     grid-template-columns: 80px 1fr 1fr;
@@ -637,40 +891,16 @@
     gap: 8px;
     margin-top: 12px;
   }
-  .cm-col-hdr {
-    font-size: 10px;
-    font-family: var(--mono);
-    font-weight: 700;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    text-align: center;
-    padding: 2px;
-  }
-  .cm-row-hdr {
-    font-size: 10px;
-    font-family: var(--mono);
-    font-weight: 700;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-  }
-  .cm-cell {
-    background: var(--panel-raised);
-    border: 1px solid var(--hairline);
-    border-radius: 6px;
-    padding: 12px;
-    text-align: center;
-  }
-  .cm-cell.tp { background: rgba(16, 185, 129, 0.14); border: 1px solid rgba(16, 185, 129, 0.4); }
-  .cm-cell.fn { background: rgba(239, 68, 68, 0.14); border: 1px solid rgba(239, 68, 68, 0.4); }
-  .cm-cell.fp { background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.4); }
-  .cm-cell.tn { background: rgba(0, 212, 255, 0.08); border: 1px solid rgba(0, 212, 255, 0.3); }
+  .cm-col-hdr { font-size: 10px; font-family: var(--mono); font-weight: 700; color: var(--text-dim); text-transform: uppercase; text-align: center; padding: 2px; }
+  .cm-row-hdr { font-size: 10px; font-family: var(--mono); font-weight: 700; color: var(--text-dim); text-transform: uppercase; display: flex; align-items: center; justify-content: center; text-align: center; }
+  .cm-cell { background: var(--panel-raised); border: 1px solid var(--hairline); border-radius: 6px; padding: 12px; text-align: center; }
+  .cm-cell.tp { background: var(--safe-bg); border: 1px solid var(--safe-bg); }
+  .cm-cell.fn { background: var(--alert-bg); border: 1px solid var(--alert-bg); }
+  .cm-cell.fp { background: var(--caution-bg); border: 1px solid var(--caution-bg); }
+  .cm-cell.tn { background: var(--nav-active-bg); border: 1px solid var(--cyan-glow); }
 
-  .cm-tag { font-size: 9px; font-family: var(--mono); font-weight: 700; letter-spacing: 0.05em; color: var(--text-muted); }
-  .cm-cell .num { font-family: var(--mono); font-size: 22px; font-weight: 600; letter-spacing: -0.02em; margin: 2px 0; }
+  .cm-tag { font-size: 9px; font-family: var(--mono); font-weight: 700; letter-spacing: 0.05em; color: var(--text-dim); }
+  .cm-cell .num { font-family: var(--mono); font-size: 22px; font-weight: 600; margin: 2px 0; }
   .cm-cell.tp .num { color: var(--safe); }
   .cm-cell.fn .num { color: var(--alert); }
   .cm-cell.fp .num { color: var(--caution); }
@@ -690,6 +920,13 @@
     padding-top: 16px;
   }
 </style>
+<script>
+  (function() {
+    const saved = localStorage.getItem('riskshield-theme');
+    const theme = (saved === 'dark' || saved === 'light') ? saved : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
 </head>
 <body>
 
@@ -712,186 +949,388 @@
       <a href="#auditTrail">Audit Trail</a>
       <a href="#policies">Policies</a>
     </div>
-    <div class="pulse"><span class="dot"></span>model loaded</div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <button id="themeToggleBtn" class="theme-toggle-btn" onclick="toggleTheme()" title="Switch visual theme">
+        <span class="theme-icon moon-icon" style="display:none;">☾</span>
+        <span class="theme-icon sun-icon" style="display:inline;">☀</span>
+        <span id="themeToggleText">Light</span>
+      </button>
+      <div class="pulse"><span class="dot"></span>MODEL ONLINE</div>
+    </div>
   </div>
 </nav>
 
 <div class="shell">
 
-  <!-- Operational Risk Status Banner -->
-  <div class="status-banner" id="overview">
-    <span class="status-banner-badge"><span class="cyan-pulse-dot"></span>System Status</span>
-    <strong id="statusMessage" style="font-weight: 600;">ACTIVE RISK MONITORING — 125 transactions flagged across 1,308 evaluated (95.2% Precision, 0.51% False-Positive Rate). Active velocity burst detected on Merchant M7.</strong>
+  <!-- Workflow Lifecycle Breadcrumb Bar -->
+  <div class="workflow-breadcrumb">
+    <div class="wf-step active" onclick="location.hash='#overview'"><span class="wf-num">1</span> DETECT</div>
+    <span class="wf-arrow">→</span>
+    <div class="wf-step" onclick="location.hash='#priorityQueue'"><span class="wf-num">2</span> INVESTIGATE</div>
+    <span class="wf-arrow">→</span>
+    <div class="wf-step" onclick="location.hash='#scoring'"><span class="wf-num">3</span> DECIDE</div>
+    <span class="wf-arrow">→</span>
+    <div class="wf-step" onclick="location.hash='#economics'"><span class="wf-num">4</span> MEASURE IMPACT</div>
+    <span class="wf-arrow">→</span>
+    <div class="wf-step" onclick="location.hash='#evaluation'"><span class="wf-num">5</span> VALIDATE</div>
+    <span class="wf-arrow">→</span>
+    <div class="wf-step" onclick="location.hash='#failureLab'"><span class="wf-num">6</span> TEST RESILIENCE</div>
+    <span class="wf-arrow">→</span>
+    <div class="wf-step" onclick="location.hash='#auditTrail'"><span class="wf-num">7</span> AUDIT</div>
   </div>
 
-  <!-- Section 1: Risk Overview Grid -->
+  <!-- Operational Risk Command Center Header with Dynamic Health Telemetry -->
+  <div class="command-center-header" id="overview">
+    <div class="cmd-hdr-top">
+      <div class="cmd-title-wrap">
+        <span class="cmd-eyebrow"><span class="cyan-pulse-dot"></span> RISK COMMAND CENTER · REAL-TIME PROTOTYPE</span>
+        <h1 class="cmd-title">Merchant Risk Intelligence & Investigation Center</h1>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <div class="cmd-status-badge">
+          <span style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">MODEL</span>
+          <span id="healthModel" class="badge-status safe">ONLINE</span>
+          <button id="btnResetModel" onclick="resetModelStatus()" style="display:none; padding:1px 6px; font-size:10px; background:var(--electric-cyan); color:#fff; border:none; border-radius:3px; cursor:pointer;">RESET</button>
+        </div>
+        <div class="cmd-status-badge">
+          <span style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">SCORING API</span>
+          <span id="healthScoring" class="badge-status safe">HEALTHY</span>
+        </div>
+        <div class="cmd-status-badge">
+          <span style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">AUDIT STORE</span>
+          <span id="healthAudit" class="badge-status safe">HEALTHY</span>
+        </div>
+        <div class="cmd-status-badge">
+          <span style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">FALLBACK</span>
+          <span id="healthFallback" class="badge-status safe">ARMED</span>
+        </div>
+      </div>
+    </div>
+    <div class="cmd-hdr-stats">
+      <div class="cmd-stat-item">
+        <span class="cmd-stat-lbl">Final Test Set Split</span>
+        <span class="cmd-stat-val" id="cmdTestSize">872 <span class="cmd-stat-sub">txns</span></span>
+      </div>
+      <div class="cmd-stat-item highlight-flag">
+        <span class="cmd-stat-lbl">Flagged Reviews</span>
+        <span class="cmd-stat-val" id="cmdFlaggedCount">106 <span class="cmd-stat-sub">txns (12.2%)</span></span>
+      </div>
+      <div class="cmd-stat-item highlight-alert">
+        <span class="cmd-stat-lbl">Aggregate Burst Exposure</span>
+        <span class="cmd-stat-val" id="cmdExposureVal">$48,200.00</span>
+      </div>
+      <div class="cmd-stat-item highlight-safe">
+        <span class="cmd-stat-lbl">Model Precision / Recall</span>
+        <span class="cmd-stat-val" id="cmdPrecRecall">95.3% <span class="cmd-stat-sub">prec · 91.0% recall</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Synthetic Live Stream Control Bar -->
+  <div style="background: var(--panel); border: 1px solid var(--hairline); border-left: 4px solid var(--electric-cyan); border-radius: 8px; padding: 12px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: var(--card-shadow);">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span class="status-banner-badge" style="background: var(--nav-active-bg); color: var(--electric-cyan); border-color: var(--cyan-glow);">
+        <span class="cyan-pulse-dot" id="liveStreamDot"></span>
+        SYNTHETIC LIVE STREAM
+      </span>
+      <span style="font-size: 12.5px; color: var(--text-dim);">Live synthetic transaction stream for demonstration.</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <button id="btnLiveStreamToggle" onclick="toggleLiveStream()" class="filter-btn" style="font-family: var(--mono); font-weight: 600;">
+        ⚡ Live Stream: OFF
+      </button>
+      <button onclick="stepLiveStream()" class="filter-btn" style="color: var(--electric-cyan); border-color: var(--electric-cyan); font-family: var(--mono); font-weight: 600;">
+        + Step 1 Event
+      </button>
+    </div>
+  </div>
+
+  <!-- Risk Posture Policy Selector Bar -->
+  <div style="background: var(--panel-raised); border: 1px solid var(--hairline); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <span style="font-weight: 700; font-size: 12.5px; color: var(--text);">Active Risk Posture Policy:</span>
+      <span id="activePolicyDesc" style="font-size: 11.5px; color: var(--text-dim); margin-left: 8px;">BALANCED — Gate Threshold: 0.0160 (Optimized on 20% Validation Split)</span>
+    </div>
+    <div style="display: flex; gap: 6px;">
+      <button id="policyBtnStrict" onclick="setPolicyMode('STRICT')" class="filter-btn" style="font-family: var(--mono); font-size: 11px;">STRICT (0.008)</button>
+      <button id="policyBtnBalanced" onclick="setPolicyMode('BALANCED')" class="filter-btn active" style="font-family: var(--mono); font-size: 11px;">BALANCED (0.016)</button>
+      <button id="policyBtnFrictionless" onclick="setPolicyMode('FRICTIONLESS')" class="filter-btn" style="font-family: var(--mono); font-size: 11px;">FRICTIONLESS (0.032)</button>
+    </div>
+  </div>
+
+  <!-- Section 1: Hero Risk Overview Grid -->
   <div class="overview-grid">
     <div class="ov-card caught">
       <div class="ov-card-head">
         <div class="lbl">Fraud Value Caught</div>
         <div class="ov-icon-chip green"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>
       </div>
-      <div class="val" id="ovCaught">$201,585</div>
+      <div class="val" id="ovCaught">$180,831.88</div>
     </div>
     <div class="ov-card recall">
       <div class="ov-card-head">
         <div class="lbl">Recall Rate</div>
         <div class="ov-icon-chip green"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
       </div>
-      <div class="val" id="ovRecall">92.3%</div>
+      <div class="val" id="ovRecall">91.0%</div>
     </div>
     <div class="ov-card prec">
       <div class="ov-card-head">
         <div class="lbl">Precision Rate</div>
         <div class="ov-icon-chip green"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div>
       </div>
-      <div class="val" id="ovPrec">95.2%</div>
+      <div class="val" id="ovPrec">95.3%</div>
     </div>
     <div class="ov-card fp">
       <div class="ov-card-head">
         <div class="lbl">False-Positive Rate</div>
         <div class="ov-icon-chip amber"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div>
       </div>
-      <div class="val" id="ovFpRate">0.51%</div>
+      <div class="val" id="ovFpRate">0.66%</div>
     </div>
     <div class="ov-card analyzed">
       <div class="ov-card-head">
-        <div class="lbl">Analyzed Txns</div>
+        <div class="lbl">Final Test Split</div>
         <div class="ov-icon-chip cyan"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg></div>
       </div>
-      <div class="val" id="ovTotal">1,308</div>
+      <div class="val" id="ovTotal">872</div>
     </div>
     <div class="ov-card flagged">
       <div class="ov-card-head">
-        <div class="lbl">Flagged Txns</div>
+        <div class="lbl">Flagged Reviews</div>
         <div class="ov-icon-chip cyan"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9"/></svg></div>
       </div>
-      <div class="val" id="ovFlagged">125</div>
+      <div class="val" id="ovFlagged">106</div>
     </div>
     <div class="ov-card exposure">
       <div class="ov-card-head">
-        <div class="lbl">Exposure Under Review</div>
-        <div class="ov-icon-chip red"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+        <div class="lbl">Review Rate</div>
+        <div class="ov-icon-chip cyan"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
       </div>
-      <div class="val" id="ovExposure">$218,525</div>
+      <div class="val" id="ovReviewRate">12.2%</div>
     </div>
   </div>
 
   <div class="grid-2col">
-    <!-- Section 2: Transactions Investigation Table -->
-    <div class="panel" id="transactions">
-      <div class="panel-header">
-        <div>
-          <h2><span class="sec-tag">REAL-TIME FEED</span>Transaction Risk Stream</h2>
-          <p class="sub">Click any row to inspect transaction evidence & feature contributions</p>
+    <!-- Left Column: Priority Queue & Transaction Stream -->
+    <div>
+      <!-- Section 2: Priority Risk Queue -->
+      <div class="priority-queue-panel" id="priorityQueue">
+        <div class="pq-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <div>
+            <h2 style="font-size: 15px; font-weight: 700; margin: 0; color: var(--text);"><span class="sec-tag">ACTION REQUIRED</span>Priority Risk Queue</h2>
+            <p class="sub" style="margin-top: 2px;">Highest-risk transactions derived dynamically from live stream</p>
+          </div>
+          <span style="font-size: 11px; font-family: var(--mono); color: var(--electric-cyan); background: var(--nav-active-bg); padding: 3px 8px; border-radius: 4px; border: 1px solid var(--cyan-glow);">TOP TRIAGE TARGETS</span>
         </div>
-        <div class="toolbar">
-          <button id="btnAll" class="filter-btn active">Showing 150 of 1,308</button>
-          <button id="btnFlagged" class="filter-btn">Flagged Only</button>
+        <div id="pqList" class="pq-list"></div>
+      </div>
+
+      <!-- Section 3: Transactions Investigation Table -->
+      <div class="panel" id="transactions">
+        <div class="panel-header">
+          <div>
+            <h2><span class="sec-tag">REAL-TIME FEED</span>Transaction Risk Stream</h2>
+            <p class="sub">Click any row to inspect transaction evidence & feature contributions</p>
+          </div>
+          <div class="toolbar">
+            <button id="btnAll" class="filter-btn active">Showing 150 of 1,308 — Live Risk Feed</button>
+            <button id="btnFlagged" class="filter-btn">Flagged Only</button>
+          </div>
         </div>
-      </div>
 
-      <div class="table-controls">
-        <input type="text" id="txnSearch" class="table-search" placeholder="Search Txn ID / Merchant..." oninput="renderFilteredTransactions()">
-        <select id="merchantFilter" class="table-search" style="width: 140px;" onchange="renderFilteredTransactions()">
-          <option value="all">All Merchants</option>
-          <option value="0">Merchant M0</option>
-          <option value="1">Merchant M1</option>
-          <option value="3">Merchant M3</option>
-          <option value="7">Merchant M7</option>
-        </select>
-        <select id="sortOrder" class="table-search" style="width: 150px;" onchange="renderFilteredTransactions()">
-          <option value="time_desc">Newest First</option>
-          <option value="risk_desc">Highest Risk First</option>
-          <option value="amt_desc">Highest Amount First</option>
-        </select>
-      </div>
+        <div class="table-controls">
+          <input type="text" id="txnSearch" class="table-search" placeholder="Search Txn ID / Merchant..." oninput="renderFilteredTransactions()">
+          <select id="merchantFilter" class="table-search" style="width: 140px;" onchange="renderFilteredTransactions()">
+            <option value="all">All Merchants</option>
+            <option value="0">Merchant M0</option>
+            <option value="1">Merchant M1</option>
+            <option value="3">Merchant M3</option>
+            <option value="7">Merchant M7</option>
+            <option value="9">Merchant M9</option>
+          </select>
+          <select id="sortOrder" class="table-search" style="width: 150px;" onchange="renderFilteredTransactions()">
+            <option value="time_desc">Newest First</option>
+            <option value="risk_desc">Highest Risk First</option>
+            <option value="amt_desc">Highest Amount First</option>
+          </select>
+        </div>
 
-      <div style="overflow-x: auto;">
-        <table class="txn-table">
-          <thead>
-            <tr>
-              <th>Txn ID</th>
-              <th>Merchant</th>
-              <th>Amount</th>
-              <th>Velocity (10m)</th>
-              <th>Risk Score</th>
-              <th>Decision</th>
-              <th>Key Signal</th>
-            </tr>
-          </thead>
-          <tbody id="txnBody"></tbody>
-        </table>
-      </div>
+        <div style="overflow-x: auto;">
+          <table class="txn-table">
+            <thead>
+              <tr>
+                <th>Txn ID</th>
+                <th>Merchant</th>
+                <th>Amount</th>
+                <th>Velocity (10m)</th>
+                <th>Risk Score</th>
+                <th>Decision</th>
+                <th>Key Signal</th>
+              </tr>
+            </thead>
+            <tbody id="txnBody"></tbody>
+          </table>
+        </div>
 
-      <div style="margin-top: 14px; text-align: center;">
-        <button id="btnLoadMore" class="filter-btn" style="padding: 8px 24px; font-weight: 600; cursor: pointer;" onclick="loadMoreTransactions()">
-          Load 150 More Transactions (<span id="txnLoadedCount">150</span> / 1,308 Loaded)
-        </button>
+        <div style="margin-top: 14px; text-align: center;">
+          <button id="btnLoadMore" class="filter-btn" style="padding: 8px 24px; font-weight: 600; cursor: pointer;" onclick="loadMoreTransactions()">
+            Load 150 More Transactions (<span id="txnLoadedCount">150</span> / 1,308 Loaded)
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- Section 3 & 4: Live Scoring Instrument & Decision Provenance -->
-    <div class="panel" id="scoring">
-      <h2><span class="sec-tag">RISK ENGINE</span>Live Risk Scoring Instrument</h2>
-      <p class="sub">Evaluate transaction payload against deployed risk model</p>
-
-      <div class="gauge-container">
-        <svg class="gauge-svg" viewBox="0 0 100 60">
-          <path class="gauge-bg" d="M 15 50 A 35 35 0 0 1 85 50" />
-          <path class="gauge-fill" id="gaugeArc" d="M 15 50 A 35 35 0 0 1 85 50" />
-        </svg>
-        <div class="gauge-text">
-          <div class="gauge-score" id="gaugeVal">0.0%</div>
-          <div class="gauge-status" id="gaugeRiskLabel">IDLE</div>
+    <!-- Right Column: AI Risk Explanation & Live Scoring Instrument -->
+    <div>
+      <!-- Section 4: AI Risk Explanation & Reasoning Panel -->
+      <div class="ai-explanation-card" id="aiExplanation">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <h2 style="font-size: 15px; font-weight: 700; margin: 0; color: var(--text);"><span class="sec-tag">EXPLAINABILITY</span>Model Feature Importance & Transaction Evidence</h2>
+          <span style="font-size: 11px; font-family: var(--mono); color: var(--text-dim);">GLOBAL WEIGHTS VS LOCAL SIGNALS</span>
         </div>
+        <div id="aiExplanationBody"></div>
       </div>
 
-      <div class="field">
-        <label>Amount ($)</label>
-        <input type="number" id="fAmount" value="4200" step="0.01">
-      </div>
-      <div class="row2">
+      <!-- Section 5: Live Scoring Instrument & Decision Provenance -->
+      <div class="panel" id="scoring">
+        <h2><span class="sec-tag">RISK ENGINE</span>Live Risk Scoring Instrument</h2>
+        <p class="sub">Evaluate transaction payload against active policy gate threshold</p>
+
+        <div class="gauge-container">
+          <svg class="gauge-svg" viewBox="0 0 100 60">
+            <path class="gauge-bg" d="M 15 50 A 35 35 0 0 1 85 50" />
+            <path class="gauge-fill" id="gaugeArc" d="M 15 50 A 35 35 0 0 1 85 50" />
+          </svg>
+          <div class="gauge-text">
+            <div class="gauge-score" id="gaugeVal">0.0%</div>
+            <div class="gauge-status" id="gaugeRiskLabel">IDLE</div>
+          </div>
+        </div>
+
         <div class="field">
-          <label>Merchant ID</label>
-          <input type="number" id="fMerchant" value="3" min="0" max="11">
+          <label>Amount ($)</label>
+          <input type="number" id="fAmount" value="4200" step="0.01">
         </div>
-        <div class="field">
-          <label>Device ID</label>
-          <input type="number" id="fDevice" value="9001">
+        <div class="row2">
+          <div class="field">
+            <label>Merchant ID</label>
+            <input type="number" id="fMerchant" value="3" min="0" max="11">
+          </div>
+          <div class="field">
+            <label>Device ID</label>
+            <input type="number" id="fDevice" value="9001">
+          </div>
         </div>
-      </div>
-      <label class="checkline">
-        <input type="checkbox" id="fKnown" checked> Known Customer Device
-      </label>
-      <label class="checkline">
-        <input type="checkbox" id="fIpMatch" checked> IP Country Matches Billing
-      </label>
-      <button class="action-btn" onclick="scoreTransaction()">Run Risk Scoring</button>
+        <label class="checkline">
+          <input type="checkbox" id="fKnown" checked> Known Customer Device
+        </label>
+        <label class="checkline">
+          <input type="checkbox" id="fIpMatch" checked> IP Country Matches Billing
+        </label>
+        <button class="action-btn" onclick="scoreTransaction()">Run Risk Scoring</button>
 
-      <!-- Provenance Chain -->
-      <div class="provenance-box">
-        <div class="provenance-title">Decision Provenance & Gate Pipeline</div>
-        <div class="provenance-steps">
-          <div class="p-step">
-            <div class="st-lbl">1. ML Score</div>
-            <div class="st-val" id="provProb" style="color: var(--accent-blue);">—</div>
+        <!-- Provenance Chain -->
+        <div class="provenance-box">
+          <div class="provenance-title">Decision Provenance & Active Gate Pipeline</div>
+          <div class="provenance-steps">
+            <div class="p-step">
+              <div class="st-lbl">1. ML Score</div>
+              <div class="st-val" id="provProb" style="color: var(--accent-blue);">—</div>
+            </div>
+            <div class="p-step">
+              <div class="st-lbl">2. Gate Threshold</div>
+              <div class="st-val" id="provThresh" style="color: var(--text-dim);">0.0160</div>
+            </div>
+            <div class="p-step">
+              <div class="st-lbl">3. Policy Mode</div>
+              <div class="st-val" id="provPolicy" style="color: var(--electric-cyan);">BALANCED</div>
+            </div>
+            <div class="p-step">
+              <div class="st-lbl">4. Action Verdict</div>
+              <div class="st-val" id="provDecision">—</div>
+            </div>
           </div>
-          <div class="p-step">
-            <div class="st-lbl">2. Gate Threshold</div>
-            <div class="st-val" style="color: var(--text-dim);">0.0102</div>
+        </div>
+
+        <div class="result" id="scoreResult" style="display:none; margin-top:12px; padding:12px; background:var(--panel-raised); border-radius:6px; font-size:12.5px;">
+          <div class="prob" id="probValue" style="font-family:var(--mono); font-size:20px; font-weight:700;">—</div>
+          <div class="verdict" id="verdictText" style="color:var(--text-dim); margin-top:2px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operational Summaries Grid (3 Columns) -->
+  <div class="summary-3col-grid">
+    <!-- Card 1: Risk Pulse Telemetry -->
+    <div class="summary-card">
+      <div>
+        <div class="summary-card-title"><span style="color: var(--electric-cyan);">⚡</span> RISK PULSE — Live Telemetry Window</div>
+        <div class="summary-card-sub">Transaction velocity over 10-minute telemetry window</div>
+        <div style="height: 110px; margin-bottom: 12px;">
+          <canvas id="burstChart"></canvas>
+        </div>
+        <div class="summary-stat-row">
+          <span style="color: var(--text-dim);">Peak Telemetry Velocity:</span>
+          <span style="color: var(--alert); font-weight: 700;">32 txns / 10m (M9 Surge)</span>
+        </div>
+        <div class="summary-stat-row">
+          <span style="color: var(--text-dim);">Baseline Traffic Rate:</span>
+          <span style="color: var(--safe); font-weight: 600;">1.2 txns / 10m</span>
+        </div>
+      </div>
+      <a href="#spike" class="summary-link-btn" style="margin-top: 14px;">Open Spike Detector Page →</a>
+    </div>
+
+    <!-- Card 2: Financial Impact Summary -->
+    <div class="summary-card">
+      <div>
+        <div class="summary-card-title"><span style="color: var(--safe);">💰</span> FINANCIAL IMPACT — FP Economics Summary</div>
+        <div class="summary-card-sub">Calculated financial performance across 872 final test transactions</div>
+        <div class="summary-row-list">
+          <div class="summary-stat-row">
+            <span style="color: var(--text-dim);">Fraud Value Caught:</span>
+            <span style="color: var(--safe); font-weight: 700;" id="sumCaught">+$180,831.88</span>
           </div>
-          <div class="p-step">
-            <div class="st-lbl">3. Action Policy</div>
-            <div class="st-val" id="provDecision">—</div>
+          <div class="summary-stat-row">
+            <span style="color: var(--text-dim);">Unrecovered Missed Fraud:</span>
+            <span style="color: var(--alert); font-weight: 600;" id="sumMissed">-$19,769.19</span>
+          </div>
+          <div class="summary-stat-row">
+            <span style="color: var(--text-dim);">False Positive Friction Cost:</span>
+            <span style="color: var(--caution); font-weight: 600;" id="sumFriction">-$20.00 ($4/case)</span>
+          </div>
+          <div class="summary-stat-row" style="border-bottom: none; font-size: 13px;">
+            <span style="font-weight: 700; color: var(--text);">Net Financial Value Saved:</span>
+            <span style="color: var(--safe); font-weight: 800;" id="sumNet">+$161,042.69</span>
           </div>
         </div>
       </div>
+      <a href="#economics" class="summary-link-btn">View Full FP Economics Breakdown →</a>
+    </div>
 
-      <div class="result" id="scoreResult" style="display:none; margin-top:12px; padding:12px; background:var(--panel-raised); border-radius:6px; font-size:12.5px;">
-        <div class="prob" id="probValue" style="font-family:var(--mono); font-size:20px; font-weight:700;">—</div>
-        <div class="verdict" id="verdictText" style="color:var(--text-dim); margin-top:2px;"></div>
+    <!-- Card 3: System Resilience Summary -->
+    <div class="summary-card">
+      <div>
+        <div class="summary-card-title"><span style="color: var(--caution);">🛡️</span> SYSTEM RESILIENCE — Failure Lab Summary</div>
+        <div class="summary-card-sub">Active failure mode handling & heuristic fallbacks</div>
+        <div class="summary-row-list">
+          <div class="summary-stat-row">
+            <span style="color: var(--text-dim);">Model Timeout Fallback:</span>
+            <span style="color: var(--electric-cyan); font-weight: 600;">Amt > $5k & Unknown Device</span>
+          </div>
+          <div class="summary-stat-row">
+            <span style="color: var(--text-dim);">Duplicate Event Guard:</span>
+            <span style="color: var(--safe); font-weight: 600;">Idempotent SQLite Log</span>
+          </div>
+          <div class="summary-stat-row">
+            <span style="color: var(--text-dim);">Borderline Score Triage:</span>
+            <span style="color: var(--caution); font-weight: 600;">Compliance Review (±0.008)</span>
+          </div>
+        </div>
       </div>
+      <a href="#failureLab" class="summary-link-btn">Test Resilience in Failure Lab →</a>
     </div>
   </div>
 
@@ -900,8 +1339,8 @@
   <div class="panel">
     <div class="fp-grid">
       <div>
-        <h3 style="font-size: 14px; margin: 0 0 4px;">Held-Out Confusion Matrix Heatmap (2x2)</h3>
-        <p class="sub">1,308 test transactions evaluated against actual ground-truth labels</p>
+        <h3 style="font-size: 14px; margin: 0 0 4px;">Untouched Final Test Confusion Matrix Heatmap (2x2)</h3>
+        <p class="sub">872 final test transactions evaluated against actual ground-truth labels</p>
         <div class="cm-heatmap-wrap">
           <div></div>
           <div class="cm-col-hdr">Predicted Fraud</div>
@@ -910,29 +1349,29 @@
           <div class="cm-row-hdr">Actual Fraud</div>
           <div class="cm-cell tp">
             <div class="cm-tag">TRUE POSITIVE (TP)</div>
-            <div class="num" id="cmTp">119</div>
-            <div class="txt">Fraud Caught (92.3% Recall)</div>
-            <div class="val-stat safe">$201,585 Value</div>
+            <div class="num" id="cmTp">101</div>
+            <div class="txt">Fraud Caught (91.0% Recall)</div>
+            <div class="val-stat safe" id="cmTpVal">$180,831.88 Value</div>
           </div>
           <div class="cm-cell fn">
             <div class="cm-tag">FALSE NEGATIVE (FN)</div>
             <div class="num" id="cmFn">10</div>
-            <div class="txt">Fraud Missed (7.7%)</div>
-            <div class="val-stat alert">$16,940 Loss</div>
+            <div class="txt">Fraud Missed (9.0%)</div>
+            <div class="val-stat alert" id="cmFnVal">$19,769.19 Loss</div>
           </div>
 
           <div class="cm-row-hdr">Actual Clear</div>
           <div class="cm-cell fp">
             <div class="cm-tag">FALSE POSITIVE (FP)</div>
-            <div class="num" id="cmFp">6</div>
-            <div class="txt">False Alarm (0.51% FPR)</div>
-            <div class="val-stat caution">$24 Friction Cost</div>
+            <div class="num" id="cmFp">5</div>
+            <div class="txt">False Alarm (0.66% FPR)</div>
+            <div class="val-stat caution" id="cmFpVal">$20.00 Friction Cost</div>
           </div>
           <div class="cm-cell tn">
             <div class="cm-tag">TRUE NEGATIVE (TN)</div>
-            <div class="num" id="cmTn">1,173</div>
+            <div class="num" id="cmTn">756</div>
             <div class="txt">Clean Traffic Cleared</div>
-            <div class="val-stat cyan">99.5% Accuracy</div>
+            <div class="val-stat cyan">99.3% Accuracy</div>
           </div>
         </div>
       </div>
@@ -942,24 +1381,24 @@
         <p class="sub">Assumes $4.00 support/triage friction per false positive</p>
         <div class="econ-card">
           <div class="econ-row">
-            <span style="color: var(--text-dim);">Gross Fraud Value Caught (119 TP)</span>
-            <span style="font-family: var(--mono); color: var(--safe);">+$201,584.87</span>
+            <span style="color: var(--text-dim);">Gross Fraud Value Caught (<span id="sheetTpCount">101</span> TP)</span>
+            <span style="font-family: var(--mono); color: var(--safe);" id="sheetCaught">+$180,831.88</span>
           </div>
           <div class="econ-row">
-            <span style="color: var(--text-dim);">False Positive Friction (6 FP × $4.00)</span>
-            <span style="font-family: var(--mono); color: var(--caution);">-$24.00</span>
+            <span style="color: var(--text-dim);">False Positive Friction (<span id="sheetFpCount">5</span> FP × $4.00)</span>
+            <span style="font-family: var(--mono); color: var(--caution);" id="sheetFpCost">-$20.00</span>
           </div>
           <div class="econ-row">
-            <span style="color: var(--text-dim);">Unrecovered Missed Fraud (10 FN)</span>
-            <span style="font-family: var(--mono); color: var(--alert);">-$16,939.90</span>
+            <span style="color: var(--text-dim);">Unrecovered Missed Fraud (<span id="sheetFnCount">10</span> FN)</span>
+            <span style="font-family: var(--mono); color: var(--alert);" id="sheetMissed">-$19,769.19</span>
           </div>
           <div class="econ-row total">
             <span>Net Financial Value Saved</span>
-            <span style="font-family: var(--mono); color: var(--safe); font-size: 16px;">+$184,620.97</span>
+            <span style="font-family: var(--mono); color: var(--safe); font-size: 16px;" id="sheetNetSaved">+$161,042.69</span>
           </div>
         </div>
-        <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 10px; line-height: 1.4;">
-          * Precision Protection Ratio: The model would need to become <strong>8,399x worse at precision</strong> before false-positive friction cost ($24) exceeds the fraud value caught ($201,585).
+        <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 10px; line-height: 1.4;" id="econTextSummary">
+          * Decision Economics Summary: 101 True Positives caught $180,831.88 in fraud with 5 False Positives ($20.00 total triage friction) and 10 Missed Frauds ($19,769.19 unrecovered loss), yielding a Net Financial Value Saved of +$161,042.69.
         </div>
       </div>
     </div>
@@ -968,7 +1407,12 @@
   <!-- Section 6: Model Evaluation & Threshold Explorer -->
   <div class="section-title" id="evaluation"><span class="sec-tag">MODEL TUNING</span>Model Evaluation & Threshold Exploration</div>
   <div class="panel">
-    <p class="sub" style="margin-bottom: 12px;">Evaluating business trade-offs across operating thresholds on held-out test data</p>
+    <p class="sub" style="margin-bottom: 12px;">Evaluating business trade-offs across operating thresholds on chronological final test split</p>
+
+    <!-- Synthetic Data Disclosure Callout -->
+    <div style="background: var(--nav-active-bg); border: 1px solid var(--cyan-glow); border-left: 4px solid var(--electric-cyan); border-radius: 6px; padding: 12px 16px; margin-bottom: 18px; font-size: 12px; color: var(--text-dim);">
+      <strong style="color: var(--text);">Synthetic Evaluation Data Disclosure:</strong> Evaluation data is synthetic and contains injected fraud-burst scenarios designed to test risk detection behavior. Results demonstrate system behavior on the evaluation dataset and should not be interpreted as production fraud performance.
+    </div>
 
     <!-- Real Threshold Trade-off Line Chart -->
     <div style="height: 220px; margin: 16px 0; background: var(--panel-raised); border: 1px solid var(--hairline); border-radius: 6px; padding: 12px;">
@@ -978,13 +1422,13 @@
     <!-- Model Comparison Callout Box -->
     <div class="model-comparison-box" style="margin: 16px 0; padding: 14px 16px; background: var(--panel-raised); border: 1px solid var(--hairline); border-left: 4px solid var(--electric-cyan); border-radius: 6px; font-size: 12.5px;">
       <div style="font-weight: 700; font-size: 13px; color: var(--text); margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-        <span style="color: var(--electric-cyan);">📊</span> Model Comparison: Baseline vs Deployed
+        <span style="color: var(--electric-cyan);">📊</span> Model Comparison: Baseline vs Deployed (Untouched Final Test Set)
       </div>
       <div style="color: var(--text-dim); line-height: 1.5;">
-        A simpler <strong>Logistic Regression baseline</strong> matched or slightly beat the deployed Gradient Boosting model on this test set:
+        A simpler <strong>Logistic Regression baseline</strong> matched or slightly beat the deployed Gradient Boosting model on this final test split:
         <ul style="margin: 6px 0 6px 20px; padding: 0; color: var(--text);">
-          <li><strong>Baseline Logistic Regression:</strong> 95.4% Precision · 96.1% Recall · 0.9989 ROC-AUC</li>
-          <li><strong>Deployed Gradient Boosting:</strong> 95.2% Precision · 92.3% Recall · 0.9956 ROC-AUC</li>
+          <li><strong>Baseline Logistic Regression:</strong> 95.6% Precision · 97.3% Recall · 0.9994 ROC-AUC</li>
+          <li><strong>Deployed Gradient Boosting:</strong> 95.3% Precision · 91.0% Recall · 0.9928 ROC-AUC</li>
         </ul>
         <span style="color: var(--text);"><em>Key Finding:</em> The extra model complexity isn't clearly earning its keep at this dataset size — domain feature engineering (velocity bursts, z-scores) carries more weight than raw model depth.</span>
       </div>
@@ -993,14 +1437,14 @@
     <div class="thresh-bar" id="threshBar"></div>
 
     <div class="eval-metrics-grid">
-      <div class="ev-card"><div class="elbl">Threshold</div><div class="eval" id="emThresh" style="color: var(--accent-blue);">0.0102</div></div>
-      <div class="ev-card"><div class="elbl">Recall</div><div class="eval" id="emRecall" style="color: var(--safe);">92.3%</div></div>
-      <div class="ev-card"><div class="elbl">Precision</div><div class="eval" id="emPrec" style="color: var(--safe);">95.2%</div></div>
-      <div class="ev-card"><div class="elbl">F1 Score</div><div class="eval" id="emF1">0.937</div></div>
-      <div class="ev-card"><div class="elbl">False Positives</div><div class="eval" id="emFp" style="color: var(--caution);">6</div></div>
-      <div class="ev-card"><div class="elbl">FP Friction Cost</div><div class="eval" id="emFpCost" style="color: var(--caution);">$24.00</div></div>
-      <div class="ev-card"><div class="elbl">Fraud Value Caught</div><div class="eval" id="emCaught" style="color: var(--safe);">$201,585</div></div>
-      <div class="ev-card"><div class="elbl">Net Savings</div><div class="eval" id="emSavings" style="color: var(--safe);">$201,561</div></div>
+      <div class="ev-card"><div class="elbl">Threshold</div><div class="eval" id="emThresh" style="color: var(--accent-blue);">0.0160</div></div>
+      <div class="ev-card"><div class="elbl">Recall</div><div class="eval" id="emRecall" style="color: var(--safe);">91.0%</div></div>
+      <div class="ev-card"><div class="elbl">Precision</div><div class="eval" id="emPrec" style="color: var(--safe);">95.3%</div></div>
+      <div class="ev-card"><div class="elbl">F1 Score</div><div class="eval" id="emF1">0.9309</div></div>
+      <div class="ev-card"><div class="elbl">Review Rate</div><div class="eval" id="emReviewRate" style="color: var(--electric-cyan);">12.2%</div></div>
+      <div class="ev-card"><div class="elbl">False Positives</div><div class="eval" id="emFp" style="color: var(--caution);">5</div></div>
+      <div class="ev-card"><div class="elbl">FP Friction Cost</div><div class="eval" id="emFpCost" style="color: var(--caution);">$20.00</div></div>
+      <div class="ev-card"><div class="elbl">Net Financial Saved</div><div class="eval" id="emSavings" style="color: var(--safe);">$161,042.69</div></div>
     </div>
   </div>
 
@@ -1009,18 +1453,17 @@
   <div class="spike-panel">
     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
       <div>
-        <h3 style="font-size: 15px; margin: 0 0 2px;">Merchant M7 Burst Signature</h3>
-        <p class="sub" style="margin:0;">Burst pattern detected: 28 rapid transactions in 10-minute window from new device pool</p>
+        <h3 style="font-size: 15px; margin: 0 0 2px;">Merchant M9 Burst Signature</h3>
+        <p class="sub" style="margin:0;">Burst pattern detected: 32 rapid transactions in 10-minute window from high-velocity merchant pool</p>
       </div>
       <span class="badge flagged" style="font-size: 11px;">ACTIVE SPIKE DETECTED</span>
     </div>
     <div class="spike-stats">
-      <div class="ev-card"><div class="elbl">Burst Rate</div><div class="eval" style="color: var(--alert);">28 / 10m</div></div>
+      <div class="ev-card"><div class="elbl">Burst Rate</div><div class="eval" style="color: var(--alert);">32 / 10m</div></div>
       <div class="ev-card"><div class="elbl">Baseline Traffic</div><div class="eval">1.2 / 10m</div></div>
-      <div class="ev-card"><div class="elbl">Rate Deviation</div><div class="eval" style="color: var(--alert);">+2,233%</div></div>
-      <div class="ev-card"><div class="elbl">Exposed Volume</div><div class="eval" style="color: var(--caution);">$48,200</div></div>
+      <div class="ev-card"><div class="elbl">Rate Deviation</div><div class="eval" style="color: var(--alert);">+2,566%</div></div>
+      <div class="ev-card"><div class="elbl">Aggregate Burst Exposure</div><div class="eval" style="color: var(--caution);">$48,200.00</div></div>
     </div>
-    <!-- Real Velocity Burst Bar Chart -->
     <div style="height: 170px; margin-top: 16px; background: var(--panel-raised); border: 1px solid var(--hairline); border-radius: 6px; padding: 12px;">
       <canvas id="burstChart"></canvas>
     </div>
@@ -1043,7 +1486,7 @@
     <div class="lab-card">
       <div>
         <h4>2. Duplicate Transaction Event</h4>
-        <p>Submits duplicate transaction payload to verify idempotency handling and cache response.</p>
+        <p>Submits duplicate transaction payload to verify idempotency handling via SQLite audit logging.</p>
       </div>
       <button class="lab-btn" onclick="runLabDuplicate()">Submit Duplicate Payload</button>
     </div>
@@ -1051,7 +1494,7 @@
     <div class="lab-card">
       <div>
         <h4>3. Low-Confidence Score Handling</h4>
-        <p>Scores borderline transaction near threshold (0.0102) to verify Manual Review escalation.</p>
+        <p>Scores borderline transaction near active threshold (0.0160) to verify Manual Review escalation.</p>
       </div>
       <button class="lab-btn" onclick="runLabBorderline()">Score Borderline Case</button>
     </div>
@@ -1059,9 +1502,9 @@
   <div class="lab-out" id="labOutput"></div>
 
   <!-- Section 9: Audit Trail -->
-  <div class="section-title" id="auditTrail"><span class="sec-tag">SYSTEM AUDIT</span>Session Audit Trail</div>
+  <div class="section-title" id="auditTrail"><span class="sec-tag">SYSTEM AUDIT</span>SQLite Persistent Audit Trail</div>
   <div class="panel">
-    <p class="sub" style="margin-bottom: 12px;">Append-only decision provenance record for all scoring requests</p>
+    <p class="sub" style="margin-bottom: 12px;">Append-only decision audit store persisted in SQLite database (`data/audit_trail.db`)</p>
     <div style="overflow-x: auto;">
       <table class="audit-table">
         <thead>
@@ -1075,38 +1518,38 @@
           </tr>
         </thead>
         <tbody id="auditBody">
-          <tr><td colspan="6" style="color: var(--text-muted); text-align: center;">No score requests logged in this session yet. Run scoring or Failure Lab tests to generate logs.</td></tr>
+          <tr><td colspan="6" style="color: var(--text-muted); text-align: center;">No score requests logged in audit database yet. Run scoring or Failure Lab tests to generate logs.</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
   <!-- Section 10: Risk Policies -->
-  <div class="section-title" id="policies"><span class="sec-tag">SYSTEM CONFIG</span>Risk Policies & System Configuration</div>
+  <div class="section-title" id="policies"><span class="sec-tag">SYSTEM CONFIG</span>Risk Posture Policies & Configuration</div>
   <div class="policy-grid">
     <div class="policy-card">
-      <div class="plbl">Active Gate Threshold</div>
-      <div class="pval">0.0102 (F1-Optimized)</div>
+      <div class="plbl">Active Policy Mode</div>
+      <div class="pval" id="policyCardMode">BALANCED</div>
+    </div>
+    <div class="policy-card">
+      <div class="plbl">Active Decision Threshold</div>
+      <div class="pval" id="policyCardThresh">0.0160</div>
     </div>
     <div class="policy-card">
       <div class="plbl">FP Friction Unit Cost</div>
       <div class="pval">$4.00 / transaction</div>
     </div>
     <div class="policy-card">
-      <div class="plbl">Fallback Heuristic Policy</div>
+      <div class="plbl">Fallback Rule Policy</div>
       <div class="pval">Amount > $5k & Unknown Device</div>
     </div>
     <div class="policy-card">
-      <div class="plbl">Risk Pipeline Architecture</div>
-      <div class="pval">GradientBoosting (n=150, depth=3)</div>
+      <div class="plbl">Validation Methodology</div>
+      <div class="pval">60% Train / 20% Val / 20% Test</div>
     </div>
     <div class="policy-card">
-      <div class="plbl">Validation Protocol</div>
-      <div class="pval">Time-Based Split (70% Train / 30% Test)</div>
-    </div>
-    <div class="policy-card">
-      <div class="plbl">Risk Decision Gate Policy</div>
-      <div class="pval">&lt;0.0102 Allow / ≥0.0102 Review/Hold</div>
+      <div class="plbl">Persistent Audit Store</div>
+      <div class="pval">SQLite (`data/audit_trail.db`)</div>
     </div>
   </div>
 
@@ -1117,7 +1560,7 @@
 <div class="modal-overlay" id="txModal" onclick="closeModal(event)">
   <div class="modal-card" onclick="event.stopPropagation()">
     <button class="modal-close" onclick="closeModalDirect()">&times;</button>
-    <div style="font-size: 11px; font-weight: 600; color: var(--accent-blue); text-transform: uppercase;" id="mCategory">Transaction Risk Investigation</div>
+    <div style="font-size: 11px; font-weight: 600; color: var(--accent-blue); text-transform: uppercase;" id="mCategory">Transaction Risk Evidence</div>
     <div style="font-size: 22px; font-weight: 700; font-family: var(--mono); margin: 4px 0 16px;" id="mTxnId">TXN000000</div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 18px; background: var(--panel-raised); border: 1px solid var(--hairline); padding: 12px; border-radius: 6px; font-size: 12px;">
@@ -1126,16 +1569,14 @@
       <div><span style="color: var(--text-dim);">Risk Score:</span> <strong id="mProb" style="font-family: var(--mono); color: var(--alert);">0.0%</strong></div>
     </div>
 
-    <!-- Section 4: Model-Level Feature Importance vs Transaction Evidence -->
     <h4 style="font-size: 12.5px; font-weight: 600; margin: 0 0 10px; text-transform: uppercase; color: var(--text-dim);">
-      Model-Level Feature Importances vs Transaction Evidence
+      Model Feature Importance & Transaction Evidence
     </h4>
     <div id="mFeatBars" style="margin-bottom: 18px;"></div>
 
-    <h4 style="font-size: 12.5px; font-weight: 600; margin: 0 0 6px; text-transform: uppercase; color: var(--text-dim);">Why Was This Flagged? (Evidence Analysis)</h4>
+    <h4 style="font-size: 12.5px; font-weight: 600; margin: 0 0 6px; text-transform: uppercase; color: var(--text-dim);">Why Was This Flagged? (Observed Signal Analysis)</h4>
     <div style="background: var(--panel-raised); border: 1px solid var(--hairline); padding: 12px; border-radius: 6px; font-size: 12.5px; color: var(--text); line-height: 1.5;" id="mExplanation"></div>
 
-    <!-- Responsible AI Statement -->
     <div class="responsible-ai-box">
       <strong>What the system did NOT use:</strong><br>
       This risk engine strictly excludes personal identity traits, gender, age, race, credit score, or protected demographic data. Risk scoring is 100% derived from non-PII transaction stream dynamics (velocity, device familiarity, IP country alignment, timestamp off-hours).
@@ -1148,16 +1589,275 @@ let currentFilter = 'all';
 let cachedTxns = [];
 let cachedMetrics = null;
 let thresholdEvals = [];
+let selectedTxnId = null;
+let liveStreamTimer = null;
 
 const GLOBAL_FEATURE_IMPORTANCES = {
-  "merchant_velocity_10min": { weight: 0.8229, name: "Merchant 10-Min Velocity" },
-  "ip_country_match": { weight: 0.1144, name: "IP / Billing Country Match" },
-  "is_off_hours": { weight: 0.0435, name: "Off-Hours Timing (1-5 AM)" },
-  "device_velocity_30min": { weight: 0.0060, name: "Device 30-Min Velocity" },
-  "amount": { weight: 0.0059, name: "Transaction Amount ($)" },
-  "device_is_known": { weight: 0.0057, name: "Recognized Device" },
-  "amount_zscore": { weight: 0.0015, name: "Amount Z-Score Outlier" }
+  "merchant_velocity_10min": { weight: 0.8214, name: "Merchant 10-Min Velocity" },
+  "ip_country_match": { weight: 0.1068, name: "IP / Billing Country Match" },
+  "is_off_hours": { weight: 0.0490, name: "Off-Hours Timing (1-5 AM)" },
+  "device_is_known": { weight: 0.0081, name: "Recognized Device" },
+  "device_velocity_30min": { weight: 0.0075, name: "Device 30-Min Velocity" },
+  "amount": { weight: 0.0060, name: "Transaction Amount ($)" },
+  "amount_zscore": { weight: 0.0011, name: "Amount Z-Score Outlier" }
 };
+
+function formatCurrency(val) {
+  if (val === undefined || val === null || isNaN(val)) return '$0.00';
+  return '$' + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+async function loadSystemHealth() {
+  try {
+    const res = await fetch('/api/system_health');
+    const h = await res.json();
+    const modelBadge = document.getElementById('healthModel');
+    const fallbackBadge = document.getElementById('healthFallback');
+    const resetBtn = document.getElementById('btnResetModel');
+
+    if (modelBadge) {
+      modelBadge.textContent = h.model_status;
+      modelBadge.className = `badge-status ${h.model_status === 'ONLINE' ? 'safe' : 'alert'}`;
+    }
+    if (fallbackBadge) {
+      fallbackBadge.textContent = h.fallback_status;
+      fallbackBadge.className = `badge-status ${h.fallback_status === 'ARMED' ? 'safe' : 'alert'}`;
+    }
+    if (resetBtn) {
+      resetBtn.style.display = h.model_status === 'UNAVAILABLE' ? 'inline-block' : 'none';
+    }
+  } catch (e) {
+    console.error("Health fetch error:", e);
+  }
+}
+
+async function resetModelStatus() {
+  await fetch('/api/failure_lab/reset', { method: 'POST' });
+  loadSystemHealth();
+  loadAuditTrail();
+}
+
+async function setPolicyMode(mode) {
+  const res = await fetch('/api/policy', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: mode })
+  });
+  const data = await res.json();
+  updatePolicyUI(data.active_policy_mode, data.active_threshold);
+  await loadMetrics();
+  await loadTransactions();
+  await loadThresholds();
+}
+
+function updatePolicyUI(mode, thresholdVal) {
+  document.getElementById('policyBtnStrict')?.classList.toggle('active', mode === 'STRICT');
+  document.getElementById('policyBtnBalanced')?.classList.toggle('active', mode === 'BALANCED');
+  document.getElementById('policyBtnFrictionless')?.classList.toggle('active', mode === 'FRICTIONLESS');
+
+  const descEl = document.getElementById('activePolicyDesc');
+  if (descEl) {
+    descEl.textContent = `${mode} — Active Gate Threshold: ${thresholdVal.toFixed(4)}`;
+  }
+  const provThresh = document.getElementById('provThresh');
+  const provPolicy = document.getElementById('provPolicy');
+  if (provThresh) provThresh.textContent = thresholdVal.toFixed(4);
+  if (provPolicy) provPolicy.textContent = mode;
+
+  const pCardMode = document.getElementById('policyCardMode');
+  const pCardThresh = document.getElementById('policyCardThresh');
+  if (pCardMode) pCardMode.textContent = mode;
+  if (pCardThresh) pCardThresh.textContent = thresholdVal.toFixed(4);
+}
+
+async function toggleLiveStream() {
+  const res = await fetch('/api/live_stream/toggle', { method: 'POST' });
+  const data = await res.json();
+  updateLiveStreamUI(data.live_stream_active);
+}
+
+function updateLiveStreamUI(active) {
+  const btn = document.getElementById('btnLiveStreamToggle');
+  const dot = document.getElementById('liveStreamDot');
+  if (btn) {
+    btn.textContent = active ? '⚡ Live Stream: ON' : '⚡ Live Stream: OFF';
+    btn.className = `filter-btn ${active ? 'active' : ''}`;
+  }
+  if (dot) {
+    dot.style.background = active ? 'var(--safe)' : 'var(--electric-cyan)';
+  }
+
+  if (active && !liveStreamTimer) {
+    liveStreamTimer = setInterval(stepLiveStream, 3000);
+  } else if (!active && liveStreamTimer) {
+    clearInterval(liveStreamTimer);
+    liveStreamTimer = null;
+  }
+}
+
+async function stepLiveStream() {
+  const res = await fetch('/api/live_stream/next', { method: 'POST' });
+  const data = await res.json();
+  if (data.live_transaction) {
+    cachedTxns.unshift(data.live_transaction);
+    renderFilteredTransactions();
+    renderPriorityQueue();
+    loadAuditTrail();
+  }
+}
+
+function renderPriorityQueue() {
+  const pqEl = document.getElementById('pqList');
+  if (!pqEl || !cachedTxns || !cachedTxns.length) return;
+
+  const sorted = [...cachedTxns].sort((a, b) => b.fraud_probability - a.fraud_probability);
+  const top4 = sorted.slice(0, 4);
+
+  if (!selectedTxnId && top4.length > 0) {
+    selectedTxnId = top4[0].transaction_id;
+  }
+
+  pqEl.innerHTML = top4.map((r) => {
+    let tier = 'REVIEW';
+    let tierClass = 'review';
+    if (r.fraud_probability >= 0.90) { tier = 'CRITICAL'; tierClass = 'critical'; }
+    else if (r.fraud_probability >= 0.50) { tier = 'HIGH'; tierClass = 'high'; }
+
+    let triggerSignal = 'Normal Stream Signature';
+    if (r.merchant_velocity_10min > 5) triggerSignal = `Velocity Surge (${r.merchant_velocity_10min}/10m)`;
+    else if (!r.ip_country_match) triggerSignal = 'IP Country Mismatch';
+    else if (r.is_off_hours) triggerSignal = 'Off-Hours Activity';
+
+    const isSelected = selectedTxnId === r.transaction_id;
+    const timeStr = r.timestamp.includes(' ') ? r.timestamp.split(' ')[1] : r.timestamp;
+
+    return `
+      <div class="pq-card ${isSelected ? 'active-selected' : ''}" onclick="inspectPriorityTxn('${r.transaction_id}')">
+        <div class="pq-left">
+          <span class="pq-tier-badge ${tierClass}">${tier}</span>
+          <div>
+            <div class="pq-merch">Merchant M${r.merchant_id}</div>
+            <div class="pq-meta">${r.transaction_id} · ${timeStr}</div>
+          </div>
+        </div>
+        <div class="pq-right">
+          <div>
+            <div class="pq-score">${(r.fraud_probability * 100).toFixed(1)}%</div>
+            <div class="pq-amt">${formatCurrency(r.amount)}</div>
+          </div>
+          <div class="pq-signal">${triggerSignal}</div>
+          <button class="pq-btn">INSPECT</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  renderAIExplanation(selectedTxnId);
+}
+
+function inspectPriorityTxn(txnId) {
+  selectedTxnId = txnId;
+  renderPriorityQueue();
+  renderAIExplanation(txnId);
+  const idx = cachedTxns.findIndex(t => t.transaction_id === txnId);
+  if (idx >= 0) openTxnDetail(idx);
+}
+
+function renderAIExplanation(txnId) {
+  const container = document.getElementById('aiExplanationBody');
+  if (!container || !cachedTxns || !cachedTxns.length) return;
+
+  const target = txnId ? cachedTxns.find(t => t.transaction_id === txnId) : cachedTxns.sort((a, b) => b.fraud_probability - a.fraud_probability)[0];
+  if (!target) return;
+  selectedTxnId = target.transaction_id;
+
+  const probPct = (target.fraud_probability * 100).toFixed(1);
+  const isFlagged = target.flagged;
+  const decisionText = isFlagged ? 'FLAGGED (POLICY THRESHOLD EXCEEDED)' : 'CLEAR (SAFE BOUNDS)';
+  const decisionColor = isFlagged ? 'var(--alert)' : 'var(--safe)';
+  const activeThresh = cachedMetrics ? cachedMetrics.active_threshold : 0.0160;
+
+  container.innerHTML = `
+    <div class="ai-score-banner">
+      <div>
+        <div style="font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase;">Active Target Transaction</div>
+        <div style="font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--text);">${target.transaction_id} (Merchant M${target.merchant_id})</div>
+        <div style="font-size: 12px; color: var(--text-dim); margin-top: 2px;">Amount: <strong>${formatCurrency(target.amount)}</strong></div>
+      </div>
+      <div style="text-align: right;">
+        <div class="ai-score-num" style="color: ${decisionColor};">${probPct}%</div>
+        <div style="font-size: 10.5px; font-family: var(--mono); font-weight: 700; color: ${decisionColor}; margin-top: 4px;">${decisionText}</div>
+      </div>
+    </div>
+
+    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px;">Model Signal Breakdown vs Baselines</div>
+    <table class="ai-signal-table">
+      <thead>
+        <tr>
+          <th>Signal Feature</th>
+          <th>Observed Value</th>
+          <th>Baseline</th>
+          <th>Global Weight</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Merchant Velocity (10m)</td>
+          <td style="font-weight: 700; color: ${target.merchant_velocity_10min > 5 ? 'var(--alert)' : 'var(--text)'};">${target.merchant_velocity_10min} txns</td>
+          <td style="color: var(--text-dim);">1.2/10m</td>
+          <td style="color: var(--electric-cyan); font-weight: 700;">82.1%</td>
+        </tr>
+        <tr>
+          <td>IP Billing Match</td>
+          <td style="font-weight: 700; color: ${!target.ip_country_match ? 'var(--alert)' : 'var(--safe)'};">${target.ip_country_match ? 'Match' : 'Mismatch (False)'}</td>
+          <td style="color: var(--text-dim);">Match (True)</td>
+          <td style="color: var(--electric-cyan); font-weight: 700;">10.7%</td>
+        </tr>
+        <tr>
+          <td>Off-Hours Activity</td>
+          <td style="font-weight: 700; color: ${target.is_off_hours ? 'var(--caution)' : 'var(--text)'};">${target.is_off_hours ? 'Yes (1-5 AM)' : 'No (Daytime)'}</td>
+          <td style="color: var(--text-dim);">Daytime</td>
+          <td style="color: var(--electric-cyan); font-weight: 700;">4.9%</td>
+        </tr>
+        <tr>
+          <td>Device Velocity (30m)</td>
+          <td>${target.device_velocity_30min} txns</td>
+          <td style="color: var(--text-dim);">1.0/30m</td>
+          <td style="color: var(--text-dim);">0.8%</td>
+        </tr>
+        <tr>
+          <td>Device Status</td>
+          <td>${target.device_is_known ? 'Known Device' : 'Unrecognized'}</td>
+          <td style="color: var(--text-dim);">Known Device</td>
+          <td style="color: var(--text-dim);">0.8%</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px;">Decision Provenance Pipeline</div>
+    <div class="ai-pipeline-flow">
+      <div class="pipeline-node">
+        <div class="p-lbl">1. Input Event</div>
+        <div class="p-val">${formatCurrency(target.amount)}</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-node">
+        <div class="p-lbl">2. Model Score</div>
+        <div class="p-val" style="color: ${decisionColor};">${probPct}%</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-node">
+        <div class="p-lbl">3. Gate Threshold</div>
+        <div class="p-val">${(activeThresh * 100).toFixed(2)}%</div>
+      </div>
+      <div class="pipeline-arrow">→</div>
+      <div class="pipeline-node">
+        <div class="p-lbl">4. Verdict Action</div>
+        <div class="p-val" style="color: ${decisionColor};">${isFlagged ? 'FLAGGED' : 'CLEAR'}</div>
+      </div>
+    </div>
+  `;
+}
 
 function updateGauge(prob) {
   const arc = document.getElementById('gaugeArc');
@@ -1169,10 +1869,11 @@ function updateGauge(prob) {
   const offset = maxDash - (maxDash * prob);
   arc.style.strokeDashoffset = offset;
 
+  const activeThresh = cachedMetrics ? cachedMetrics.active_threshold : 0.0160;
   let color = 'var(--safe)';
   let glow = 'drop-shadow(0 0 10px rgba(16, 185, 129, 0.6))';
   let riskText = 'LOW RISK';
-  if (prob >= 0.0102) {
+  if (prob >= activeThresh) {
     color = 'var(--caution)';
     glow = 'drop-shadow(0 0 10px rgba(245, 158, 11, 0.7))';
     riskText = 'ELEVATED RISK';
@@ -1195,25 +1896,49 @@ async function loadMetrics() {
   cachedMetrics = await res.json();
   const m = cachedMetrics;
 
-  document.getElementById('ovCaught').textContent = '$' + m.estimated_fraud_value_caught_usd.toLocaleString();
+  document.getElementById('ovCaught').textContent = formatCurrency(m.estimated_fraud_value_caught_usd);
   document.getElementById('ovRecall').textContent = (m.recall * 100).toFixed(1) + '%';
   document.getElementById('ovPrec').textContent = (m.precision * 100).toFixed(1) + '%';
   
-  const fpRate = (m.confusion_matrix.fp / (m.confusion_matrix.fp + m.confusion_matrix.tn) * 100).toFixed(2) + '%';
+  const fpRate = (m.fpr * 100).toFixed(2) + '%';
   document.getElementById('ovFpRate').textContent = fpRate;
   
   document.getElementById('ovTotal').textContent = m.test_set_size.toLocaleString();
   document.getElementById('ovFlagged').textContent = (m.confusion_matrix.tp + m.confusion_matrix.fp);
-  document.getElementById('ovExposure').textContent = '$' + Math.floor(m.estimated_fraud_value_caught_usd + m.estimated_fraud_value_missed_usd).toLocaleString();
+  document.getElementById('ovReviewRate').textContent = (m.review_rate * 100).toFixed(1) + '%';
+  
+  const expVal = m.estimated_fraud_value_caught_usd + m.estimated_fraud_value_missed_usd;
+  document.getElementById('cmdExposureVal').textContent = formatCurrency(expVal);
+  document.getElementById('cmdTestSize').textContent = m.test_set_size.toLocaleString() + ' txns';
+  document.getElementById('cmdFlaggedCount').textContent = (m.confusion_matrix.tp + m.confusion_matrix.fp) + ' txns (' + (m.review_rate*100).toFixed(1) + '%)';
+  document.getElementById('cmdPrecRecall').innerHTML = `${(m.precision*100).toFixed(1)}% <span class="cmd-stat-sub">prec · ${(m.recall*100).toFixed(1)}% recall</span>`;
 
   // Confusion matrix
   document.getElementById('cmTp').textContent = m.confusion_matrix.tp;
   document.getElementById('cmFp').textContent = m.confusion_matrix.fp;
   document.getElementById('cmFn').textContent = m.confusion_matrix.fn;
   document.getElementById('cmTn').textContent = m.confusion_matrix.tn.toLocaleString();
+  document.getElementById('cmTpVal').textContent = formatCurrency(m.estimated_fraud_value_caught_usd) + ' Value';
+  document.getElementById('cmFnVal').textContent = formatCurrency(m.estimated_fraud_value_missed_usd) + ' Loss';
+  document.getElementById('cmFpVal').textContent = formatCurrency(m.estimated_fp_cost_total_usd) + ' Friction';
+
+  // Balance sheet
+  document.getElementById('sheetTpCount').textContent = m.confusion_matrix.tp;
+  document.getElementById('sheetFpCount').textContent = m.confusion_matrix.fp;
+  document.getElementById('sheetFnCount').textContent = m.confusion_matrix.fn;
+  document.getElementById('sheetCaught').textContent = '+' + formatCurrency(m.estimated_fraud_value_caught_usd);
+  document.getElementById('sheetFpCost').textContent = '-' + formatCurrency(m.estimated_fp_cost_total_usd);
+  document.getElementById('sheetMissed').textContent = '-' + formatCurrency(m.estimated_fraud_value_missed_usd);
+  document.getElementById('sheetNetSaved').textContent = '+' + formatCurrency(m.net_financial_savings_usd);
+  document.getElementById('sumCaught').textContent = '+' + formatCurrency(m.estimated_fraud_value_caught_usd);
+  document.getElementById('sumMissed').textContent = '-' + formatCurrency(m.estimated_fraud_value_missed_usd);
+  document.getElementById('sumFriction').textContent = '-' + formatCurrency(m.estimated_fp_cost_total_usd);
+  document.getElementById('sumNet').textContent = '+' + formatCurrency(m.net_financial_savings_usd);
+
+  updatePolicyUI(m.active_policy_mode || "BALANCED", m.active_threshold || m.threshold);
 
   document.getElementById('footNote').textContent =
-    `Model: ${m.model} · Threshold: ${m.threshold} · Held-Out Test Set: ${m.test_set_size} transactions (${m.test_set_fraud_count} fraud). Cost Assumption: $${m.false_positive_cost_assumption_usd}/false positive.`;
+    `Model: ${m.model} · Active Threshold: ${m.active_threshold} (Policy: ${m.active_policy_mode}) · Final Test Split: ${m.test_set_size} transactions (${m.test_set_fraud_count} fraud). Methodology: ${m.split_metadata.methodology}`;
 }
 
 let txnOffset = 0;
@@ -1227,6 +1952,7 @@ async function loadTransactions() {
   txnOffset = cachedTxns.length;
   updateLoadMoreUI(cachedTxns.length);
   renderFilteredTransactions();
+  renderPriorityQueue();
   renderBurstChart();
 }
 
@@ -1242,6 +1968,7 @@ async function loadMoreTransactions() {
     cachedTxns = cachedTxns.concat(newTxns);
     txnOffset += newTxns.length;
     renderFilteredTransactions();
+    renderPriorityQueue();
   }
 
   updateLoadMoreUI(newTxns.length);
@@ -1252,7 +1979,7 @@ function updateLoadMoreUI(lastBatchCount) {
   const btnAll = document.getElementById('btnAll');
 
   if (btnAll) {
-    btnAll.textContent = currentFilter === 'flagged' ? `Flagged (${cachedTxns.length})` : `Showing ${cachedTxns.length} of 1,308`;
+    btnAll.textContent = currentFilter === 'flagged' ? `Flagged (${cachedTxns.length})` : `Showing ${cachedTxns.length} of 1,308 — Live Risk Feed`;
   }
 
   if (btn) {
@@ -1287,7 +2014,6 @@ function renderFilteredTransactions() {
     return true;
   });
 
-  // Sorting
   if (sortOrder === 'risk_desc') {
     filtered.sort((a, b) => b.fraud_probability - a.fraud_probability);
   } else if (sortOrder === 'amt_desc') {
@@ -1307,7 +2033,7 @@ function renderFilteredTransactions() {
       <tr onclick="openTxnDetail(${rawIdx})">
         <td style="color: var(--accent-blue); font-weight: 600;">${r.transaction_id}</td>
         <td>M${r.merchant_id}</td>
-        <td>$${r.amount.toFixed(2)}</td>
+        <td>${formatCurrency(r.amount)}</td>
         <td>${r.merchant_velocity_10min}/10m</td>
         <td>${(r.fraud_probability * 100).toFixed(1)}%</td>
         <td>
@@ -1323,18 +2049,20 @@ function openTxnDetail(idx) {
   const r = cachedTxns[idx];
   if (!r) return;
 
+  selectedTxnId = r.transaction_id;
+  renderAIExplanation(r.transaction_id);
+
   document.getElementById('mTxnId').textContent = r.transaction_id;
-  document.getElementById('mAmt').textContent = '$' + r.amount.toFixed(2);
+  document.getElementById('mAmt').textContent = formatCurrency(r.amount);
   document.getElementById('mMerchant').textContent = 'M' + r.merchant_id;
   document.getElementById('mProb').textContent = (r.fraud_probability * 100).toFixed(1) + '%';
 
-  // Feature Importance vs Evidence Bars
   const featBarsEl = document.getElementById('mFeatBars');
   featBarsEl.innerHTML = Object.keys(GLOBAL_FEATURE_IMPORTANCES).map(key => {
     const info = GLOBAL_FEATURE_IMPORTANCES[key];
     const pct = (info.weight * 100).toFixed(1);
     let valStr = r[key];
-    if (key === 'amount') valStr = '$' + r.amount.toFixed(2);
+    if (key === 'amount') valStr = formatCurrency(r.amount);
     if (key === 'amount_zscore') valStr = (r.amount_zscore > 0 ? '+' : '') + r.amount_zscore.toFixed(2) + 'σ';
     if (key === 'ip_country_match') valStr = r.ip_country_match ? 'Match' : 'Mismatch';
     if (key === 'device_is_known') valStr = r.device_is_known ? 'Known' : 'Unrecognized';
@@ -1353,19 +2081,19 @@ function openTxnDetail(idx) {
     `;
   }).join('');
 
-  // Evidence Explanation
   const expEl = document.getElementById('mExplanation');
+  const activeThresh = cachedMetrics ? cachedMetrics.active_threshold : 0.0160;
   if (r.flagged) {
     expEl.innerHTML = `
-      Flagged primarily due to <strong>Merchant 10-Minute Velocity (${r.merchant_velocity_10min} transactions)</strong> which carries 82.3% of the trained model's risk weight, combined with ${r.ip_country_match ? 'aligned IP billing match' : '<strong style="color:var(--alert);">an IP country mismatch</strong> (11.4% model weight)'}.
+      Flagged primarily due to <strong>Merchant 10-Minute Velocity (${r.merchant_velocity_10min} transactions)</strong> which carries 82.1% of the trained model's risk weight, combined with ${r.ip_country_match ? 'aligned IP billing match' : '<strong style="color:var(--alert);">an IP country mismatch</strong> (10.7% model weight)'}.
       <br><br>
-      <strong>Decision Policy:</strong> High risk score (${(r.fraud_probability*100).toFixed(1)}%) exceeds deployed threshold (1.02%). Recommended action: Hold for Compliance Review.
+      <strong>Decision Policy:</strong> Risk score (${(r.fraud_probability*100).toFixed(1)}%) exceeds active policy threshold (${(activeThresh*100).toFixed(2)}%). Action: Flagged for Review.
     `;
   } else {
     expEl.innerHTML = `
       Cleared as standard traffic. Observed Merchant Velocity (${r.merchant_velocity_10min}/10m) and device signals fall within standard historical transaction bounds.
       <br><br>
-      <strong>Decision Policy:</strong> Low risk score (${(r.fraud_probability*100).toFixed(1)}%) is below deployed threshold (1.02%). Recommended action: Auto-Clear.
+      <strong>Decision Policy:</strong> Low risk score (${(r.fraud_probability*100).toFixed(1)}%) is below active policy threshold (${(activeThresh*100).toFixed(2)}%). Action: Auto-Clear.
     `;
   }
 
@@ -1379,12 +2107,57 @@ function closeModalDirect() {
   document.getElementById('txModal').classList.remove('open');
 }
 
+function getInitialTheme() {
+  const saved = localStorage.getItem('riskshield-theme');
+  if (saved === 'dark' || saved === 'light') return saved;
+  return 'light';
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('riskshield-theme', theme);
+
+  const toggleBtn = document.getElementById('themeToggleBtn');
+  const toggleText = document.getElementById('themeToggleText');
+  const moonIcon = toggleBtn ? toggleBtn.querySelector('.moon-icon') : null;
+  const sunIcon = toggleBtn ? toggleBtn.querySelector('.sun-icon') : null;
+
+  if (theme === 'dark') {
+    if (toggleText) toggleText.textContent = 'Dark';
+    if (moonIcon) moonIcon.style.display = 'inline';
+    if (sunIcon) sunIcon.style.display = 'none';
+  } else {
+    if (toggleText) toggleText.textContent = 'Light';
+    if (moonIcon) moonIcon.style.display = 'none';
+    if (sunIcon) sunIcon.style.display = 'inline';
+  }
+
+  if (typeof thresholdEvals !== 'undefined' && thresholdEvals && thresholdEvals.length) {
+    renderThreshChart(thresholdEvals);
+  }
+  renderBurstChart();
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+}
+
 let threshChartInstance = null;
 function renderThreshChart(evaluations) {
   const ctx = document.getElementById('threshChart')?.getContext('2d');
   if (!ctx || !evaluations || !evaluations.length) return;
 
   if (threshChartInstance) threshChartInstance.destroy();
+
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const textColor = isDark ? '#9CA3AF' : '#5B6472';
+  const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
+  const precColor = isDark ? '#10B981' : '#1B8A5A';
+  const precBg = isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(27, 138, 90, 0.1)';
+  const recallColor = isDark ? '#00D4FF' : '#0284C7';
+  const recallBg = isDark ? 'rgba(0, 212, 255, 0.12)' : 'rgba(2, 132, 199, 0.1)';
 
   const labels = evaluations.map(e => String(e.threshold));
   const precData = evaluations.map(e => (e.precision * 100).toFixed(1));
@@ -1398,24 +2171,24 @@ function renderThreshChart(evaluations) {
         {
           label: 'Precision (%)',
           data: precData,
-          borderColor: '#10B981',
-          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+          borderColor: precColor,
+          backgroundColor: precBg,
           borderWidth: 2,
           tension: 0.3,
           fill: true,
           pointRadius: evaluations.map(e => e.is_deployed ? 6 : 3),
-          pointBackgroundColor: evaluations.map(e => e.is_deployed ? '#00D4FF' : '#10B981'),
+          pointBackgroundColor: evaluations.map(e => e.is_deployed ? recallColor : precColor),
         },
         {
           label: 'Recall (%)',
           data: recallData,
-          borderColor: '#00D4FF',
-          backgroundColor: 'rgba(0, 212, 255, 0.1)',
+          borderColor: recallColor,
+          backgroundColor: recallBg,
           borderWidth: 2,
           tension: 0.3,
           fill: true,
           pointRadius: evaluations.map(e => e.is_deployed ? 6 : 3),
-          pointBackgroundColor: evaluations.map(e => e.is_deployed ? '#00D4FF' : '#00D4FF'),
+          pointBackgroundColor: evaluations.map(e => e.is_deployed ? recallColor : recallColor),
         }
       ]
     },
@@ -1424,7 +2197,7 @@ function renderThreshChart(evaluations) {
       maintainAspectRatio: false,
       animation: { duration: 750, easing: 'easeOutQuart' },
       plugins: {
-        legend: { labels: { color: '#9CA3AF', font: { family: 'IBM Plex Mono', size: 11 } } },
+        legend: { labels: { color: textColor, font: { family: 'IBM Plex Mono', size: 11 } } },
         tooltip: {
           callbacks: {
             label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}%`
@@ -1433,16 +2206,16 @@ function renderThreshChart(evaluations) {
       },
       scales: {
         x: {
-          title: { display: true, text: 'Operating Threshold', color: '#6B7280', font: { family: 'IBM Plex Mono', size: 10 } },
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#9CA3AF', font: { family: 'IBM Plex Mono', size: 10 } }
+          title: { display: true, text: 'Operating Threshold', color: textColor, font: { family: 'IBM Plex Mono', size: 10 } },
+          grid: { color: gridColor },
+          ticks: { color: textColor, font: { family: 'IBM Plex Mono', size: 10 } }
         },
         y: {
-          min: 80,
+          min: 75,
           max: 100,
-          title: { display: true, text: 'Rate (%)', color: '#6B7280', font: { family: 'IBM Plex Mono', size: 10 } },
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#9CA3AF', font: { family: 'IBM Plex Mono', size: 10 } }
+          title: { display: true, text: 'Rate (%)', color: textColor, font: { family: 'IBM Plex Mono', size: 10 } },
+          grid: { color: gridColor },
+          ticks: { color: textColor, font: { family: 'IBM Plex Mono', size: 10 } }
         }
       }
     }
@@ -1456,9 +2229,15 @@ function renderBurstChart() {
 
   if (burstChartInstance) burstChartInstance.destroy();
 
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const textColor = isDark ? '#9CA3AF' : '#5B6472';
+  const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)';
+  const highColor = isDark ? '#EF4444' : '#C82C2C';
+  const lowColor = isDark ? '#10B981' : '#1B8A5A';
+
   const labels = ['00:01', '00:02', '00:03', '00:04', '00:05', '00:06', '00:07', '00:08', '00:09', '00:10'];
   const counts = [1, 2, 4, 7, 6, 4, 2, 1, 1, 0];
-  const barColors = counts.map(c => c > 1 ? '#EF4444' : '#10B981');
+  const barColors = counts.map(c => c > 1 ? highColor : lowColor);
 
   burstChartInstance = new Chart(ctx, {
     type: 'bar',
@@ -1485,15 +2264,15 @@ function renderBurstChart() {
       },
       scales: {
         x: {
-          title: { display: true, text: 'Burst Telemetry Window (10 Minutes)', color: '#6B7280', font: { family: 'IBM Plex Mono', size: 10 } },
+          title: { display: true, text: 'Burst Telemetry Window (10 Minutes)', color: textColor, font: { family: 'IBM Plex Mono', size: 10 } },
           grid: { display: false },
-          ticks: { color: '#9CA3AF', font: { family: 'IBM Plex Mono', size: 10 } }
+          ticks: { color: textColor, font: { family: 'IBM Plex Mono', size: 10 } }
         },
         y: {
           beginAtZero: true,
-          title: { display: true, text: 'Txns / Min', color: '#6B7280', font: { family: 'IBM Plex Mono', size: 10 } },
-          grid: { color: 'rgba(255, 255, 255, 0.05)' },
-          ticks: { color: '#9CA3AF', font: { family: 'IBM Plex Mono', size: 10 } }
+          title: { display: true, text: 'Txns / Min', color: textColor, font: { family: 'IBM Plex Mono', size: 10 } },
+          grid: { color: gridColor },
+          ticks: { color: textColor, font: { family: 'IBM Plex Mono', size: 10 } }
         }
       }
     }
@@ -1508,14 +2287,16 @@ async function loadThresholds() {
   renderThreshChart(thresholdEvals);
 
   const bar = document.getElementById('threshBar');
-  bar.innerHTML = thresholdEvals.map((e, i) => `
-    <button class="thresh-item ${e.is_deployed ? 'active' : ''}" onclick="selectThreshold(${i})">
-      Threshold ${e.threshold} ${e.is_deployed ? '(Deployed)' : ''}
-    </button>
-  `).join('');
+  if (bar) {
+    bar.innerHTML = thresholdEvals.map((e, i) => `
+      <button class="thresh-item ${e.is_deployed ? 'active' : ''}" onclick="selectThreshold(${i})">
+        Threshold ${e.threshold} ${e.is_deployed ? '(Active Policy)' : ''}
+      </button>
+    `).join('');
+  }
 
   const deployedIdx = thresholdEvals.findIndex(e => e.is_deployed);
-  selectThreshold(deployedIdx >= 0 ? deployedIdx : 2);
+  selectThreshold(deployedIdx >= 0 ? deployedIdx : 3);
 }
 
 function selectThreshold(idx) {
@@ -1529,10 +2310,10 @@ function selectThreshold(idx) {
   document.getElementById('emRecall').textContent = (e.recall * 100).toFixed(1) + '%';
   document.getElementById('emPrec').textContent = (e.precision * 100).toFixed(1) + '%';
   document.getElementById('emF1').textContent = e.f1;
+  document.getElementById('emReviewRate').textContent = (e.review_rate * 100).toFixed(1) + '%';
   document.getElementById('emFp').textContent = e.fp;
-  document.getElementById('emFpCost').textContent = '$' + e.fp_cost_usd.toLocaleString();
-  document.getElementById('emCaught').textContent = '$' + e.fraud_caught_usd.toLocaleString();
-  document.getElementById('emSavings').textContent = '$' + e.net_savings_usd.toLocaleString();
+  document.getElementById('emFpCost').textContent = formatCurrency(e.fp_cost_usd);
+  document.getElementById('emSavings').textContent = formatCurrency(e.net_savings_usd);
 }
 
 async function loadAuditTrail() {
@@ -1542,7 +2323,7 @@ async function loadAuditTrail() {
   if (!body) return;
 
   if (logs.length === 0) {
-    body.innerHTML = '<tr><td colspan="6" style="color: var(--text-muted); text-align: center;">No score requests logged in this session yet. Run scoring or Failure Lab tests to generate logs.</td></tr>';
+    body.innerHTML = '<tr><td colspan="6" style="color: var(--text-muted); text-align: center;">No score requests logged in audit database yet. Run scoring or Failure Lab tests to generate logs.</td></tr>';
     return;
   }
 
@@ -1550,7 +2331,7 @@ async function loadAuditTrail() {
     <tr>
       <td>${l.timestamp}</td>
       <td style="color: var(--accent-blue);">${l.transaction_id}</td>
-      <td>$${l.amount.toFixed(2)}</td>
+      <td>${formatCurrency(l.amount)}</td>
       <td>${(l.fraud_probability * 100).toFixed(1)}%</td>
       <td style="font-size: 11px; color: var(--text-dim);">${l.execution_mode}</td>
       <td>${l.flagged ? '<span class="badge flagged">FLAGGED</span>' : '<span class="badge clear">CLEAR</span>'}</td>
@@ -1568,12 +2349,13 @@ async function runLabFallback() {
   const out = document.getElementById('labOutput');
   out.style.display = 'block';
   out.innerHTML = `
-    <strong>[SCENARIO A: MODEL UNAVAILABLE]</strong><br>
-    Model Status: ${data.model_status} | Execution Mode: ${data.mode}<br>
-    Rule Triggered: <em>${data.rule_executed}</em> (Amount: $${data.amount}, Device Known: ${data.device_is_known})<br>
-    Decision Output: <strong>${data.flagged ? 'FLAGGED' : 'CLEAR'}</strong><br>
+    <strong>[SCENARIO 1: MODEL UNAVAILABLE FALLBACK]</strong><br>
+    Model Status: ${data.model_status} | Fallback Status: ${data.fallback_status}<br>
+    Rule Triggered: <em>${data.rule_executed}</em> (Amount: ${formatCurrency(data.amount)}, Device Known: ${data.device_is_known})<br>
+    Decision Verdict: <strong>${data.flagged ? 'FLAGGED' : 'CLEAR'}</strong><br>
     Graceful Handling: ${data.reason}
   `;
+  loadSystemHealth();
   loadAuditTrail();
 }
 
@@ -1583,10 +2365,10 @@ async function runLabDuplicate() {
   const out = document.getElementById('labOutput');
   out.style.display = 'block';
   out.innerHTML = `
-    <strong>[SCENARIO B: DUPLICATE TRANSACTION EVENT]</strong><br>
-    Initial Submission: Txn ID ${data.first_submission.transaction_id} (Score: ${(data.first_submission.fraud_probability*100).toFixed(1)}%)<br>
-    Duplicate Submission: Txn ID ${data.second_submission.transaction_id} (Is Duplicate Flag: <strong>${data.second_submission.is_duplicate}</strong>)<br>
-    Idempotent Handling: Retained cached score result without re-evaluating feature pipelines.
+    <strong>[SCENARIO 2: DUPLICATE TRANSACTION EVENT]</strong><br>
+    First Submission: Txn ID ${data.first_submission.transaction_id} (Score: ${(data.first_submission.fraud_probability*100).toFixed(1)}%)<br>
+    Second Submission (Duplicate): Txn ID ${data.second_submission.transaction_id} (Is Duplicate Flag: <strong>${data.second_submission.is_duplicate}</strong>)<br>
+    Idempotent Handling: Retained cached score result from SQLite audit store without duplicate pipeline execution.
   `;
   loadAuditTrail();
 }
@@ -1598,9 +2380,9 @@ async function runLabBorderline() {
   out.style.display = 'block';
   const score = data.score_result;
   out.innerHTML = `
-    <strong>[SCENARIO C: LOW-CONFIDENCE / BORDERLINE SCORE]</strong><br>
-    Txn ID: ${score.transaction_id} (Amount: $185.00)<br>
-    Calculated Risk Score: <strong>${(score.fraud_probability*100).toFixed(1)}%</strong> | Gate Threshold: <strong>${(data.threshold*100).toFixed(1)}%</strong><br>
+    <strong>[SCENARIO 3: LOW-CONFIDENCE / BORDERLINE SCORE]</strong><br>
+    Txn ID: ${score.transaction_id} (Amount: ${formatCurrency(185.00)})<br>
+    Calculated Risk Score: <strong>${(score.fraud_probability*100).toFixed(1)}%</strong> | Active Gate Threshold: <strong>${(data.active_threshold*100).toFixed(1)}%</strong><br>
     Margin Delta: ±${data.margin}<br>
     Policy Recommendation: <strong style="color: var(--caution);">${score.recommendation}</strong>
   `;
@@ -1647,18 +2429,20 @@ async function scoreTransaction() {
   document.getElementById('probValue').textContent = (data.fraud_probability*100).toFixed(1) + '%';
   document.getElementById('probValue').style.color = data.flagged ? 'var(--alert)' : 'var(--safe)';
   document.getElementById('verdictText').textContent = data.flagged
-    ? `Flagged — above gate threshold (${(data.threshold_used*100).toFixed(1)}%)`
-    : `Clear — below gate threshold (${(data.threshold_used*100).toFixed(1)}%)`;
+    ? `Flagged — above active gate threshold (${(data.threshold_used*100).toFixed(2)}%)`
+    : `Clear — below active gate threshold (${(data.threshold_used*100).toFixed(2)}%)`;
 
   // Provenance Chain
   document.getElementById('provProb').textContent = (data.fraud_probability*100).toFixed(1) + '%';
   const decEl = document.getElementById('provDecision');
-  decEl.textContent = data.flagged ? 'FLAGGED' : 'CLEAR';
+  decEl.textContent = data.decision;
   decEl.style.color = data.flagged ? 'var(--alert)' : 'var(--safe)';
 
   loadAuditTrail();
 }
 
+applyTheme(getInitialTheme());
+loadSystemHealth();
 loadMetrics();
 loadTransactions();
 loadThresholds();
