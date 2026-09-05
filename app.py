@@ -3,16 +3,19 @@ RiskShield AI — Merchant Risk Intelligence & Investigation Center
 Flask API + Interactive Dashboard console.
 
 Endpoints:
-  GET  /                  -> dashboard UI
-  GET  /api/metrics        -> model performance metrics (from training)
-  GET  /api/transactions    -> scored test-set transactions (with full feature set)
-  POST /api/score          -> score a single transaction JSON payload (with active policy threshold)
-  GET  /api/policy         -> view active risk posture policy (STRICT, BALANCED, FRICTIONLESS)
-  POST /api/policy         -> update active risk posture policy mode
-  GET  /api/threshold_eval -> precision/recall/F1/cost trade-offs across thresholds
-  GET  /api/audit_trail    -> SQLite persistent decision audit trail
-  POST /api/failure_lab/fallback -> simulate model failure and fallback rules
-  POST /api/failure_lab/duplicate -> simulate duplicate transaction event
+  GET  /                          -> dashboard UI
+  GET  /api/metrics                -> model performance metrics (from training)
+  GET  /api/transactions           -> scored test-set transactions (with full feature set)
+  POST /api/score                  -> score single transaction JSON payload
+  GET  /api/policy                 -> active risk posture policy (STRICT, BALANCED, FRICTIONLESS)
+  POST /api/policy                 -> update active risk posture policy mode
+  GET  /api/live_stream/status     -> synthetic live stream status & buffer
+  POST /api/live_stream/next       -> generate & score next synthetic live stream transaction
+  POST /api/live_stream/toggle     -> toggle synthetic live stream state
+  GET  /api/threshold_eval         -> precision/recall/F1/cost trade-offs across thresholds
+  GET  /api/audit_trail            -> SQLite persistent decision audit trail
+  POST /api/failure_lab/fallback   -> simulate model failure and fallback rules
+  POST /api/failure_lab/duplicate  -> simulate duplicate transaction event
   POST /api/failure_lab/borderline -> simulate borderline score scenario
 """
 
@@ -21,6 +24,7 @@ import os
 import sys
 import time
 import sqlite3
+import random
 import joblib
 import pandas as pd
 import numpy as np
@@ -57,6 +61,8 @@ _raw = pd.read_csv(DATA_PATH, parse_dates=["timestamp"])
 _scored_df, _ = engineer_features(_raw)
 
 ACTIVE_POLICY_MODE = "BALANCED"
+LIVE_STREAM_ACTIVE = False
+LIVE_STREAM_BUFFER = []
 
 
 def get_active_threshold():
@@ -192,6 +198,69 @@ def api_policy():
         "active_policy_mode": ACTIVE_POLICY_MODE,
         "active_threshold": get_active_threshold(),
         "policy_thresholds": POLICY_THRESHOLDS
+    })
+
+
+@app.route("/api/live_stream/next", methods=["POST"])
+def api_live_stream_next():
+    is_m9_burst = (random.random() < 0.20)
+    now_ts = datetime.now()
+
+    if is_m9_burst:
+        merchant_id = 9
+        amount = round(random.uniform(450.0, 2400.0), 2)
+        dev_known = random.random() < 0.05
+        ip_match = random.random() < 0.20
+        device_id = random.choice([9901, 9902, 9903])
+    else:
+        merchant_id = random.randint(0, 11)
+        amount = round(random.lognormvariate(5.5, 0.6), 2)
+        dev_known = random.random() < 0.92
+        ip_match = random.random() < 0.97
+        device_id = random.randint(100, 800)
+
+    txn_id = f"SIM_{int(time.time()*1000)}_{random.randint(100,999)}"
+    payload = {
+        "transaction_id": txn_id,
+        "merchant_id": merchant_id,
+        "amount": amount,
+        "device_id": device_id,
+        "device_is_known": dev_known,
+        "ip_country_match": ip_match,
+        "timestamp": now_ts.strftime("%Y-%m-%d %H:%M:%S"),
+        "force_new": True
+    }
+
+    res = api_score_internal(payload, source="SYNTHETIC_LIVE_STREAM")
+    LIVE_STREAM_BUFFER.insert(0, res)
+    if len(LIVE_STREAM_BUFFER) > 50:
+        LIVE_STREAM_BUFFER.pop()
+
+    return jsonify({
+        "status": "success",
+        "live_transaction": res,
+        "buffer_size": len(LIVE_STREAM_BUFFER)
+    })
+
+
+@app.route("/api/live_stream/toggle", methods=["POST"])
+def api_live_stream_toggle():
+    global LIVE_STREAM_ACTIVE
+    payload = request.get_json(silent=True) or {}
+    if "active" in payload:
+        LIVE_STREAM_ACTIVE = bool(payload["active"])
+    else:
+        LIVE_STREAM_ACTIVE = not LIVE_STREAM_ACTIVE
+    return jsonify({
+        "live_stream_active": LIVE_STREAM_ACTIVE
+    })
+
+
+@app.route("/api/live_stream/status")
+def api_live_stream_status():
+    return jsonify({
+        "live_stream_active": LIVE_STREAM_ACTIVE,
+        "recent_transactions": LIVE_STREAM_BUFFER[:10]
     })
 
 
@@ -357,7 +426,7 @@ def api_failure_borderline():
     })
 
 
-def api_score_internal(payload):
+def api_score_internal(payload, source="MANUAL"):
     txn_id = payload.get("transaction_id", f"DEMO_{int(time.time()*1000)}")
     curr_thresh = get_active_threshold()
 
@@ -395,11 +464,14 @@ def api_score_internal(payload):
     res = {
         "is_duplicate": False,
         "transaction_id": txn_id,
+        "merchant_id": payload.get("merchant_id", 0),
+        "amount": float(payload["amount"]),
         "fraud_probability": round(prob, 4),
         "flagged": flagged,
         "decision": "FLAGGED" if flagged else "CLEAR",
         "threshold_used": round(float(curr_thresh), 4),
-        "policy_mode": ACTIVE_POLICY_MODE
+        "policy_mode": ACTIVE_POLICY_MODE,
+        "source": source
     }
     
     db_insert_audit_event({
