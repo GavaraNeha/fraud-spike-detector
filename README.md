@@ -4,6 +4,9 @@
 
 A real-time merchant risk intelligence prototype and fraud-spike detector. RiskShield AI flags fraud-ring transaction bursts (rapid-fire velocity, off-hours timing, device-farm signatures) in a merchant's transaction stream with honest precision and recall reported on an untouched chronological final test split — not a cherry-picked demo or overfitted threshold.
 
+**Live Demo:** https://riskshield-ai-d4vm.onrender.com
+(Hosted on Render's free tier — the instance may take 20-30 seconds to wake up if it has been idle.)
+
 ---
 
 ## Product Capabilities & Workflow Lifecycle
